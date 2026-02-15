@@ -207,6 +207,61 @@ export class HUD {
         .hud-level-overlay.game-over .hud-level-title {
           color: #ff4444;
         }
+        @media (pointer: coarse) {
+          .hud-bars {
+            bottom: 20px;
+            left: 16px;
+          }
+          .hud-bar-track {
+            width: 120px;
+            height: 5px;
+          }
+          .hud-bar-label {
+            font-size: 9px;
+            width: 40px;
+          }
+          .hud-ammo {
+            bottom: 20px;
+            right: 100px;
+          }
+          .hud-ammo-count {
+            font-size: 28px;
+          }
+          .hud-ammo-label {
+            font-size: 9px;
+          }
+          .hud-kills {
+            top: 16px;
+            right: 100px;
+          }
+          .hud-kills-count {
+            font-size: 18px;
+          }
+          .hud-kills-label {
+            font-size: 8px;
+          }
+          .hud-level {
+            top: 16px;
+            left: 16px;
+            font-size: 11px;
+          }
+          .hud-level-name {
+            top: 34px;
+            left: 16px;
+            font-size: 9px;
+          }
+          .hud-level-title {
+            font-size: 24px;
+            letter-spacing: 4px;
+          }
+          .hud-level-subtitle {
+            font-size: 12px;
+          }
+          .hud-crosshair {
+            width: 20px;
+            height: 20px;
+          }
+        }
       </style>
 
       <div class="hud-bars">

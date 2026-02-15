@@ -309,9 +309,11 @@ export class Game {
           setTimeout(() => screen.style.display = 'none', 500);
         }
         window.removeEventListener('click', handler);
+        window.removeEventListener('touchend', handler);
         resolve();
       };
       window.addEventListener('click', handler);
+      window.addEventListener('touchend', handler);
     });
   }
 
@@ -428,6 +430,7 @@ export class Game {
       if (!hasNextLevel) return;
 
       window.removeEventListener('click', this.levelTransitionHandler!);
+      window.removeEventListener('touchend', this.levelTransitionHandler!);
       this.levelTransitionHandler = null;
       this.startNextLevel();
     };
@@ -435,6 +438,7 @@ export class Game {
     setTimeout(() => {
       if (this.levelTransitionHandler) {
         window.addEventListener('click', this.levelTransitionHandler);
+        window.addEventListener('touchend', this.levelTransitionHandler);
       }
     }, 500);
   }
@@ -446,6 +450,7 @@ export class Game {
 
     this.levelTransitionHandler = () => {
       window.removeEventListener('click', this.levelTransitionHandler!);
+      window.removeEventListener('touchend', this.levelTransitionHandler!);
       this.levelTransitionHandler = null;
       this.restartLevel();
     };
@@ -453,6 +458,7 @@ export class Game {
     setTimeout(() => {
       if (this.levelTransitionHandler) {
         window.addEventListener('click', this.levelTransitionHandler);
+        window.addEventListener('touchend', this.levelTransitionHandler);
       }
     }, 500);
   }
