@@ -16,6 +16,12 @@ export const K2SO_MAX_SHIELD = 50;
 export const K2SO_SHIELD_REGEN_RATE = 5; // единиц в секунду
 export const K2SO_SHIELD_REGEN_DELAY = 3; // секунд после урона
 
+// Укрытие (приседание)
+export const K2SO_CROUCH_SPEED_MULT = 0.4; // 40% скорости при приседании
+export const K2SO_CROUCH_HEIGHT_SCALE = 0.55; // масштаб модели Y при приседании
+export const K2SO_COVER_HEALTH_REGEN_RATE = 3; // HP/с в укрытии
+export const K2SO_COVER_HEALTH_REGEN_DELAY = 4; // секунд после урона до начала лечения
+
 // Камера
 export const CAMERA_DISTANCE = 5;
 export const CAMERA_HEIGHT = 2.5;
@@ -37,7 +43,7 @@ export const MELEE_DAMAGE = 40;
 export const MELEE_RANGE = 2.5;
 export const MELEE_COOLDOWN = 0.8;
 
-// Враги
+// Враги — Штурмовик
 export const STORMTROOPER_HEALTH = 60;
 export const STORMTROOPER_SPEED = 3;
 export const STORMTROOPER_ACCURACY = 0.6;
@@ -45,9 +51,19 @@ export const STORMTROOPER_FIRE_RATE = 0.8;
 export const STORMTROOPER_DETECT_RANGE = 40;
 export const STORMTROOPER_ATTACK_RANGE = 35;
 
+// Враги — Турель на гусеницах
+export const TURRET_HEALTH = 120;
+export const TURRET_SPEED = 1.5;
+export const TURRET_ACCURACY = 0.8;
+export const TURRET_FIRE_RATE = 1.2;
+export const TURRET_DETECT_RANGE = 45;
+export const TURRET_ATTACK_RANGE = 40;
+export const TURRET_DAMAGE = 10;
+
 // Цвета
 export const COLOR_BLASTER_PLAYER = 0x4a9eff; // синий
 export const COLOR_BLASTER_ENEMY = 0x44ff44;   // зелёный (джедаи)
+export const COLOR_BLASTER_TURRET = 0xff4422;  // красно-оранжевый (турель)
 export const COLOR_K2SO_BODY = 0x1a1a1a;       // тёмный металл
 export const COLOR_K2SO_EYES = 0xffffff;        // белые глаза
 export const COLOR_IMPERIAL_WALL = 0x5a5a5e;    // серые стены

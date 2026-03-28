@@ -3,22 +3,26 @@ import * as CANNON from 'cannon-es';
 import { Entity } from './Entity';
 import { K2SO } from './K2SO';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
+import { Enemy } from './Enemy';
 import {
   STORMTROOPER_HEALTH, STORMTROOPER_SPEED,
   STORMTROOPER_DETECT_RANGE, STORMTROOPER_ATTACK_RANGE,
   STORMTROOPER_FIRE_RATE, STORMTROOPER_ACCURACY,
+  COLOR_BLASTER_ENEMY,
 } from '../utils/Constants';
 import { distanceXZ } from '../utils/MathUtils';
 
 type AIState = 'idle' | 'patrol' | 'alert' | 'combat' | 'search';
 
-export class Stormtrooper extends Entity {
+export class Stormtrooper extends Entity implements Enemy {
   private state: AIState = 'idle';
   private alertTimer = 0;
   private fireTimer = 0;
   wantsToShoot = false;
   shootDirection = new THREE.Vector3();
   shootOrigin = new THREE.Vector3();
+  shootDamage = 5;
+  shootColor = COLOR_BLASTER_ENEMY;
 
   // Патрульные точки
   private patrolPoints: THREE.Vector3[] = [];

@@ -8,10 +8,32 @@ export interface LevelData {
   bodies: CANNON.Body[];
   lights: THREE.Light[];
   enemies: THREE.Vector3[];
+  turrets?: THREE.Vector3[];
   playerSpawn: THREE.Vector3;
   fogColor: number;
   bgColor: number;
   grievousRef?: GrievousRef;
+}
+
+/** Добавить укрытия на уровень (ящики/баррикады) */
+function addCover(
+  group: THREE.Group,
+  bodies: CANNON.Body[],
+  physics: PhysicsSystem,
+  mat: THREE.Material,
+  defs: { x: number; y: number; z: number; w: number; h: number; d: number }[]
+): void {
+  for (const c of defs) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(c.w, c.h, c.d), mat);
+    mesh.position.set(c.x, c.y, c.z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    bodies.push(physics.createStaticBox(
+      new THREE.Vector3(c.x, c.y, c.z),
+      new THREE.Vector3(c.w, c.h, c.d)
+    ));
+  }
 }
 
 // =====================================================
@@ -100,6 +122,18 @@ export function createIcePlanet(scene: THREE.Scene, physics: PhysicsSystem): Lev
   dir.shadow.camera.far = 80;
   lights.push(dir);
 
+  // Укрытия — ледяные блоки
+  addCover(group, bodies, physics, iceMat, [
+    { x: 5, y: 0.7, z: -12, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -8, y: 0.7, z: -18, w: 2, h: 1.4, d: 2 },
+    { x: 12, y: 0.7, z: -30, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -5, y: 0.7, z: -35, w: 3, h: 1.4, d: 1 },
+    { x: 8, y: 0.7, z: -48, w: 2, h: 1.4, d: 2 },
+    { x: -12, y: 0.7, z: -55, w: 2.5, h: 1.4, d: 1.5 },
+    { x: 0, y: 0.7, z: -62, w: 3, h: 1.4, d: 1 },
+    { x: 15, y: 0.7, z: -68, w: 2, h: 1.4, d: 2 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -112,6 +146,11 @@ export function createIcePlanet(scene: THREE.Scene, physics: PhysicsSystem): Lev
       new THREE.Vector3(15, 2, -40), new THREE.Vector3(-15, 2, -45),
       new THREE.Vector3(0, 2, -55), new THREE.Vector3(20, 2, -60),
       new THREE.Vector3(-20, 2, -70),
+    ],
+    turrets: [
+      new THREE.Vector3(0, 1, -30),
+      new THREE.Vector3(-15, 1, -50),
+      new THREE.Vector3(15, 1, -65),
     ],
   };
 }
@@ -220,6 +259,19 @@ export function createJediTemple(scene: THREE.Scene, physics: PhysicsSystem): Le
   dir.shadow.camera.far = 60;
   lights.push(dir);
 
+  // Укрытия — каменные баррикады
+  addCover(group, bodies, physics, darkStoneMat, [
+    { x: 5, y: 0.6, z: -10, w: 2.5, h: 1.2, d: 1.2 },
+    { x: -6, y: 0.6, z: -18, w: 2, h: 1.2, d: 1.5 },
+    { x: 8, y: 0.6, z: -28, w: 2.5, h: 1.2, d: 1 },
+    { x: -4, y: 0.6, z: -35, w: 3, h: 1.2, d: 1.2 },
+    { x: 6, y: 0.6, z: -48, w: 2, h: 1.2, d: 1.5 },
+    { x: -7, y: 0.6, z: -55, w: 2.5, h: 1.2, d: 1 },
+    { x: 0, y: 0.6, z: -65, w: 3, h: 1.2, d: 1.2 },
+    { x: 8, y: 0.6, z: -75, w: 2, h: 1.2, d: 1.5 },
+    { x: -5, y: 0.6, z: -85, w: 2.5, h: 1.2, d: 1 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -233,6 +285,10 @@ export function createJediTemple(scene: THREE.Scene, physics: PhysicsSystem): Le
       new THREE.Vector3(5, 2, -55), new THREE.Vector3(-5, 2, -60),
       new THREE.Vector3(10, 2, -70), new THREE.Vector3(-10, 2, -80),
       new THREE.Vector3(0, 2, -90),
+    ],
+    turrets: [
+      new THREE.Vector3(0, 1, -45),
+      new THREE.Vector3(-8, 1, -75),
     ],
   };
 }
@@ -354,6 +410,20 @@ export function createDroidFactory(scene: THREE.Scene, physics: PhysicsSystem): 
     lights.push(pl);
   }
 
+  // Укрытия — металлические баррикады
+  addCover(group, bodies, physics, metalWall, [
+    { x: 8, y: 0.7, z: -10, w: 2.5, h: 1.4, d: 1.2 },
+    { x: -10, y: 0.7, z: -18, w: 2, h: 1.4, d: 1.5 },
+    { x: 6, y: 0.7, z: -32, w: 3, h: 1.4, d: 1 },
+    { x: -8, y: 0.7, z: -42, w: 2.5, h: 1.4, d: 1.2 },
+    { x: 12, y: 0.7, z: -52, w: 2, h: 1.4, d: 1.5 },
+    { x: -6, y: 0.7, z: -60, w: 3, h: 1.4, d: 1 },
+    { x: 10, y: 0.7, z: -70, w: 2.5, h: 1.4, d: 1.2 },
+    { x: -12, y: 0.7, z: -80, w: 2, h: 1.4, d: 1.5 },
+    { x: 5, y: 0.7, z: -90, w: 3, h: 1.4, d: 1.2 },
+    { x: -8, y: 0.7, z: -100, w: 2.5, h: 1.4, d: 1 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -368,6 +438,13 @@ export function createDroidFactory(scene: THREE.Scene, physics: PhysicsSystem): 
       new THREE.Vector3(15, 2, -60), new THREE.Vector3(-15, 2, -65),
       new THREE.Vector3(10, 2, -75), new THREE.Vector3(-10, 2, -85),
       new THREE.Vector3(0, 2, -95), new THREE.Vector3(20, 2, -100),
+    ],
+    turrets: [
+      new THREE.Vector3(0, 1, -25),
+      new THREE.Vector3(-15, 1, -40),
+      new THREE.Vector3(15, 1, -55),
+      new THREE.Vector3(-15, 1, -75),
+      new THREE.Vector3(15, 1, -95),
     ],
   };
 }
@@ -501,6 +578,17 @@ export function createMountainRestaurant(scene: THREE.Scene, physics: PhysicsSys
     lights.push(pl);
   }
 
+  // Укрытия — перевёрнутые столы (деревянные)
+  addCover(group, bodies, physics, tableMat, [
+    { x: 0, y: 0.5, z: -8, w: 2, h: 1, d: 1.2 },
+    { x: -6, y: 0.5, z: -15, w: 2.5, h: 1, d: 1 },
+    { x: 5, y: 0.5, z: -22, w: 2, h: 1, d: 1.2 },
+    { x: -3, y: 0.5, z: -28, w: 2.5, h: 1, d: 1 },
+    { x: 7, y: 0.5, z: -35, w: 2, h: 1, d: 1.2 },
+    { x: -7, y: 0.5, z: -42, w: 2.5, h: 1, d: 1 },
+    { x: 3, y: 0.5, z: -48, w: 2, h: 1, d: 1.2 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -517,6 +605,10 @@ export function createMountainRestaurant(scene: THREE.Scene, physics: PhysicsSys
       new THREE.Vector3(-10, 2, -52), new THREE.Vector3(3, 2, -18),
       new THREE.Vector3(-3, 2, -28), new THREE.Vector3(15, 2, -45),
       new THREE.Vector3(-15, 2, -38),
+    ],
+    turrets: [
+      new THREE.Vector3(5, 1, -20),
+      new THREE.Vector3(-5, 1, -45),
     ],
   };
 }
@@ -628,6 +720,20 @@ export function createJediCemetery(scene: THREE.Scene, physics: PhysicsSystem): 
     lights.push(pl);
   }
 
+  // Укрытия — каменные саркофаги
+  addCover(group, bodies, physics, darkGrave, [
+    { x: 5, y: 0.6, z: -12, w: 2.5, h: 1.2, d: 1.5 },
+    { x: -8, y: 0.6, z: -22, w: 2, h: 1.2, d: 2 },
+    { x: 12, y: 0.6, z: -30, w: 3, h: 1.2, d: 1.2 },
+    { x: -6, y: 0.6, z: -42, w: 2.5, h: 1.2, d: 1.5 },
+    { x: 10, y: 0.6, z: -50, w: 2, h: 1.2, d: 2 },
+    { x: -12, y: 0.6, z: -58, w: 3, h: 1.2, d: 1 },
+    { x: 0, y: 0.6, z: -68, w: 2.5, h: 1.2, d: 1.5 },
+    { x: 8, y: 0.6, z: -78, w: 2, h: 1.2, d: 2 },
+    { x: -10, y: 0.6, z: -88, w: 3, h: 1.2, d: 1.2 },
+    { x: 5, y: 0.6, z: -100, w: 2.5, h: 1.2, d: 1.5 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -645,6 +751,12 @@ export function createJediCemetery(scene: THREE.Scene, physics: PhysicsSystem): 
       new THREE.Vector3(0, 2, -80), new THREE.Vector3(12, 2, -88),
       new THREE.Vector3(-12, 2, -92), new THREE.Vector3(5, 2, -98),
       new THREE.Vector3(-5, 2, -105), new THREE.Vector3(0, 2, -110),
+    ],
+    turrets: [
+      new THREE.Vector3(10, 1, -20),
+      new THREE.Vector3(-10, 1, -45),
+      new THREE.Vector3(15, 1, -70),
+      new THREE.Vector3(-15, 1, -95),
     ],
   };
 }
@@ -769,6 +881,21 @@ export function createAbandonedCity(scene: THREE.Scene, physics: PhysicsSystem):
   dir.shadow.camera.far = 100;
   lights.push(dir);
 
+  // Укрытия — бетонные блоки обломков
+  addCover(group, bodies, physics, brokenMat, [
+    { x: 3, y: 0.7, z: -15, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -4, y: 0.7, z: -25, w: 2, h: 1.4, d: 2 },
+    { x: 5, y: 0.7, z: -38, w: 3, h: 1.4, d: 1.2 },
+    { x: -3, y: 0.7, z: -48, w: 2.5, h: 1.4, d: 1.5 },
+    { x: 4, y: 0.7, z: -58, w: 2, h: 1.4, d: 2 },
+    { x: -5, y: 0.7, z: -68, w: 3, h: 1.4, d: 1 },
+    { x: 3, y: 0.7, z: -78, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -4, y: 0.7, z: -88, w: 2, h: 1.4, d: 2 },
+    { x: 5, y: 0.7, z: -100, w: 3, h: 1.4, d: 1.2 },
+    { x: -3, y: 0.7, z: -112, w: 2.5, h: 1.4, d: 1.5 },
+    { x: 0, y: 0.7, z: -122, w: 2, h: 1.4, d: 2 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -788,6 +915,13 @@ export function createAbandonedCity(scene: THREE.Scene, physics: PhysicsSystem):
       new THREE.Vector3(4, 2, -115), new THREE.Vector3(-4, 2, -118),
       new THREE.Vector3(0, 2, -125), new THREE.Vector3(8, 2, -128),
       new THREE.Vector3(-8, 2, -130),
+    ],
+    turrets: [
+      new THREE.Vector3(5, 1, -25),
+      new THREE.Vector3(-5, 1, -50),
+      new THREE.Vector3(3, 1, -75),
+      new THREE.Vector3(-3, 1, -100),
+      new THREE.Vector3(0, 1, -120),
     ],
   };
 }
@@ -932,6 +1066,22 @@ export function createSaturnMine(scene: THREE.Scene, physics: PhysicsSystem): Le
     lights.push(pl);
   }
 
+  // Укрытия — рудные ящики
+  addCover(group, bodies, physics, metalMat, [
+    { x: 6, y: 0.7, z: -8, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -5, y: 0.7, z: -18, w: 2, h: 1.4, d: 2 },
+    { x: 7, y: 0.7, z: -28, w: 2.5, h: 1.4, d: 1.2 },
+    { x: -6, y: 0.7, z: -38, w: 3, h: 1.4, d: 1 },
+    { x: 5, y: 0.7, z: -48, w: 2, h: 1.4, d: 1.5 },
+    { x: -7, y: 0.7, z: -58, w: 2.5, h: 1.4, d: 1.2 },
+    { x: 4, y: 0.7, z: -68, w: 3, h: 1.4, d: 1 },
+    { x: -5, y: 0.7, z: -78, w: 2, h: 1.4, d: 2 },
+    { x: 6, y: 0.7, z: -88, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -4, y: 0.7, z: -98, w: 3, h: 1.4, d: 1.2 },
+    { x: 5, y: 0.7, z: -108, w: 2, h: 1.4, d: 1.5 },
+    { x: -5, y: 0.7, z: -118, w: 2.5, h: 1.4, d: 1 },
+  ]);
+
   scene.add(group);
   for (const l of lights) scene.add(l);
 
@@ -955,6 +1105,12 @@ export function createSaturnMine(scene: THREE.Scene, physics: PhysicsSystem): Le
       new THREE.Vector3(-2, 2, -88), new THREE.Vector3(5, 2, -108),
       new THREE.Vector3(-5, 2, -118), new THREE.Vector3(0, 2, -50),
     ],
+    turrets: [
+      new THREE.Vector3(5, 1, -30),
+      new THREE.Vector3(-5, 1, -55),
+      new THREE.Vector3(4, 1, -80),
+      new THREE.Vector3(-4, 1, -110),
+    ],
   };
 }
 
@@ -966,112 +1122,452 @@ export function createDesertPlanet(scene: THREE.Scene, physics: PhysicsSystem): 
   const bodies: CANNON.Body[] = [];
   const lights: THREE.Light[] = [];
 
+  // Материалы
   const sandMat = new THREE.MeshStandardMaterial({ color: 0xd4b87a, roughness: 0.9, metalness: 0.0 });
   const darkSandMat = new THREE.MeshStandardMaterial({ color: 0xb89858, roughness: 0.85, metalness: 0.0 });
   const rockMat = new THREE.MeshStandardMaterial({ color: 0x9a7a55, roughness: 0.8, metalness: 0.1 });
   const ruinMat = new THREE.MeshStandardMaterial({ color: 0xc0a878, roughness: 0.7, metalness: 0.1 });
   const metalMat = new THREE.MeshStandardMaterial({ color: 0x888880, roughness: 0.5, metalness: 0.5 });
+  const rustMat = new THREE.MeshStandardMaterial({ color: 0x7a5533, roughness: 0.8, metalness: 0.3 });
+  const clayMat = new THREE.MeshStandardMaterial({ color: 0xc4a070, roughness: 0.95, metalness: 0.0 });
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xddd8c8, roughness: 0.7, metalness: 0.05 });
+  const fabricMat = new THREE.MeshStandardMaterial({ color: 0xaa7744, roughness: 1.0, metalness: 0.0, side: THREE.DoubleSide });
+  const fabricDarkMat = new THREE.MeshStandardMaterial({ color: 0x664422, roughness: 1.0, metalness: 0.0, side: THREE.DoubleSide });
+  const waterMat = new THREE.MeshStandardMaterial({ color: 0x3388aa, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.7 });
+  const cactusMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a, roughness: 0.8, metalness: 0.0 });
+  const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x555560, roughness: 0.4, metalness: 0.7 });
+  const pitMat = new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 1.0, metalness: 0.0 });
+  const glowRedMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+  const glowGreenMat = new THREE.MeshBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.5 });
 
-  // Пол — песок
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(120, 0.5, 120), sandMat);
+  // === ПОЛ — песчаная равнина ===
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(130, 0.5, 130), sandMat);
   floor.position.set(0, -0.25, -55);
   floor.receiveShadow = true;
   group.add(floor);
-  bodies.push(physics.createStaticBox(new THREE.Vector3(0, -0.25, -55), new THREE.Vector3(120, 0.5, 120)));
+  bodies.push(physics.createStaticBox(new THREE.Vector3(0, -0.25, -55), new THREE.Vector3(130, 0.5, 130)));
 
   // Невидимые стены
   for (const s of [-1, 1]) {
-    bodies.push(physics.createStaticBox(new THREE.Vector3(s * 55, 4, -55), new THREE.Vector3(1, 8, 120)));
+    bodies.push(physics.createStaticBox(new THREE.Vector3(s * 58, 4, -55), new THREE.Vector3(1, 8, 130)));
   }
-  for (const z of [6, -116]) {
-    bodies.push(physics.createStaticBox(new THREE.Vector3(0, 4, z), new THREE.Vector3(112, 8, 1)));
+  for (const z of [10, -120]) {
+    bodies.push(physics.createStaticBox(new THREE.Vector3(0, 4, z), new THREE.Vector3(118, 8, 1)));
   }
 
-  // Песчаные дюны (большие бугры)
-  for (let i = 0; i < 10; i++) {
-    const x = (Math.random() - 0.5) * 90;
-    const z = -10 - Math.random() * 95;
-    const r = 4 + Math.random() * 6;
-    const dune = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.4), darkSandMat);
+  // === ПЕСЧАНЫЕ ДЮНЫ ===
+  for (let i = 0; i < 14; i++) {
+    const x = (Math.random() - 0.5) * 100;
+    const z = -10 - Math.random() * 100;
+    const r = 3 + Math.random() * 7;
+    const dune = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.4), darkSandMat
+    );
     dune.position.set(x, 0, z);
     group.add(dune);
-    if (Math.random() > 0.5) {
+    if (r > 5) {
       bodies.push(physics.createStaticBox(new THREE.Vector3(x, 1, z), new THREE.Vector3(r, 2, r)));
     }
   }
 
-  // Скальные формации
-  for (let i = 0; i < 8; i++) {
-    const x = (Math.random() - 0.5) * 80;
-    const z = -15 - Math.random() * 85;
-    const h = 3 + Math.random() * 5;
-    const rock = new THREE.Mesh(new THREE.BoxGeometry(2 + Math.random() * 3, h, 2 + Math.random() * 3), rockMat);
+  // === СКАЛЬНЫЕ ФОРМАЦИИ (арки и столбы) ===
+  for (let i = 0; i < 10; i++) {
+    const x = (Math.random() - 0.5) * 90;
+    const z = -12 - Math.random() * 95;
+    const h = 3 + Math.random() * 6;
+    const rock = new THREE.Mesh(
+      new THREE.BoxGeometry(2 + Math.random() * 3, h, 2 + Math.random() * 3), rockMat
+    );
     rock.position.set(x, h / 2, z);
     rock.rotation.y = Math.random() * Math.PI;
     rock.castShadow = true;
     group.add(rock);
     bodies.push(physics.createStaticBox(new THREE.Vector3(x, h / 2, z), new THREE.Vector3(5, h, 5)));
   }
+  // Каменная арка
+  const archX = -30, archZ = -50;
+  for (const s of [-1, 1]) {
+    const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.5, 6, 1.5), rockMat);
+    pillar.position.set(archX + s * 4, 3, archZ);
+    pillar.castShadow = true;
+    group.add(pillar);
+    bodies.push(physics.createStaticBox(new THREE.Vector3(archX + s * 4, 3, archZ), new THREE.Vector3(1.5, 6, 1.5)));
+  }
+  const archTop = new THREE.Mesh(new THREE.BoxGeometry(10, 1.5, 2), rockMat);
+  archTop.position.set(archX, 6.5, archZ);
+  archTop.castShadow = true;
+  group.add(archTop);
 
-  // Руины (древний храм)
-  const ruinX = 0;
-  const ruinZ = -55;
+  // === РУИНЫ ДРЕВНЕГО ХРАМА (расширенные) ===
+  const ruinX = 0, ruinZ = -55;
   // Стены руин
   for (const s of [-1, 1]) {
-    const rWall = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 12), ruinMat);
+    const rWall = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 14), ruinMat);
     rWall.position.set(s * 8 + ruinX, 2, ruinZ);
+    rWall.castShadow = true;
     group.add(rWall);
-    bodies.push(physics.createStaticBox(new THREE.Vector3(s * 8 + ruinX, 2, ruinZ), new THREE.Vector3(1, 4, 12)));
+    bodies.push(physics.createStaticBox(new THREE.Vector3(s * 8 + ruinX, 2, ruinZ), new THREE.Vector3(1, 4, 14)));
   }
-  // Обломки колонн
-  for (let i = 0; i < 4; i++) {
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 3, 6), ruinMat);
-    col.position.set(ruinX + (i - 1.5) * 4, 1.5, ruinZ + 7);
-    group.add(col);
-  }
-  // Упавшая колонна
-  const fallenCol = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 5, 6), ruinMat);
-  fallenCol.position.set(ruinX + 3, 0.5, ruinZ - 3);
-  fallenCol.rotation.z = Math.PI / 2;
-  group.add(fallenCol);
-  bodies.push(physics.createStaticBox(new THREE.Vector3(ruinX + 3, 0.5, ruinZ - 3), new THREE.Vector3(5, 1, 1)));
+  // Задняя стена (частично разрушена)
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(14, 3, 1), ruinMat);
+  backWall.position.set(ruinX, 1.5, ruinZ - 7);
+  backWall.castShadow = true;
+  group.add(backWall);
+  bodies.push(physics.createStaticBox(new THREE.Vector3(ruinX, 1.5, ruinZ - 7), new THREE.Vector3(14, 3, 1)));
 
-  // Обломки техники (разбитый транспорт)
+  // Колонны (стоящие и обломки)
+  for (let i = 0; i < 4; i++) {
+    const cx = ruinX + (i - 1.5) * 4;
+    const standing = i % 2 === 0;
+    if (standing) {
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 4, 8), ruinMat);
+      col.position.set(cx, 2, ruinZ + 7);
+      col.castShadow = true;
+      group.add(col);
+      // Капитель
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.5, 0.4, 8), ruinMat);
+      cap.position.set(cx, 4.2, ruinZ + 7);
+      group.add(cap);
+    } else {
+      // Упавшая
+      const fallen = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4, 6), ruinMat);
+      fallen.position.set(cx + 1, 0.4, ruinZ + 8);
+      fallen.rotation.z = Math.PI / 2;
+      fallen.rotation.y = 0.3;
+      group.add(fallen);
+      bodies.push(physics.createStaticBox(new THREE.Vector3(cx + 1, 0.4, ruinZ + 8), new THREE.Vector3(4, 0.8, 1)));
+    }
+  }
+  // Алтарь внутри руин
+  const altar = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1.5), rockMat);
+  altar.position.set(ruinX, 0.5, ruinZ - 4);
+  altar.castShadow = true;
+  group.add(altar);
+  bodies.push(physics.createStaticBox(new THREE.Vector3(ruinX, 0.5, ruinZ - 4), new THREE.Vector3(2, 1, 1.5)));
+  // Светящийся артефакт на алтаре
+  const artifact = new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), glowGreenMat);
+  artifact.position.set(ruinX, 1.2, ruinZ - 4);
+  group.add(artifact);
+  const artifactLight = new THREE.PointLight(0x44ff44, 1, 8);
+  artifactLight.position.set(ruinX, 1.5, ruinZ - 4);
+  lights.push(artifactLight);
+
+  // === ПОСЕЛЕНИЕ (палатки и глиняные домики) ===
+  const townX = 25, townZ = -30;
+  // Глиняные домики
   for (let i = 0; i < 3; i++) {
-    const wx = 20 + (Math.random() - 0.5) * 30;
-    const wz = -25 - i * 30;
+    const hx = townX + (i - 1) * 10;
+    const hz = townZ - i * 5;
+    const hw = 4 + Math.random() * 2;
+    const hh = 3 + Math.random();
+    const hd = 4 + Math.random() * 2;
+
+    const house = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hd), clayMat);
+    house.position.set(hx, hh / 2, hz);
+    house.castShadow = true;
+    group.add(house);
+    bodies.push(physics.createStaticBox(new THREE.Vector3(hx, hh / 2, hz), new THREE.Vector3(hw, hh, hd)));
+
+    // Дверной проём
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.2), new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.9 }));
+    door.position.set(hx, 1, hz + hd / 2 + 0.1);
+    group.add(door);
+
+    // Купол на крыше
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(hw * 0.35, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), clayMat);
+    dome.position.set(hx, hh, hz);
+    group.add(dome);
+  }
+
+  // Палатки
+  for (let i = 0; i < 4; i++) {
+    const tx = townX - 8 + i * 6;
+    const tz = townZ + 8;
+    const tent = new THREE.Group();
+
+    // Каркас (столб)
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.5, 4), rustMat);
+    pole.position.y = 1.25;
+    tent.add(pole);
+
+    // Ткань (конус)
+    const cloth = new THREE.Mesh(
+      new THREE.ConeGeometry(2, 2.2, 6, 1, true), i % 2 === 0 ? fabricMat : fabricDarkMat
+    );
+    cloth.position.y = 1.4;
+    tent.add(cloth);
+
+    tent.position.set(tx, 0, tz);
+    group.add(tent);
+    bodies.push(physics.createStaticBox(new THREE.Vector3(tx, 1, tz), new THREE.Vector3(2, 2, 2)));
+  }
+
+  // Ящики и бочки у поселения
+  for (let i = 0; i < 5; i++) {
+    const cx = townX - 5 + Math.random() * 20;
+    const cz = townZ - 3 + Math.random() * 15;
+    if (Math.random() > 0.5) {
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), rustMat);
+      crate.position.set(cx, 0.5, cz);
+      crate.castShadow = true;
+      group.add(crate);
+      bodies.push(physics.createStaticBox(new THREE.Vector3(cx, 0.5, cz), new THREE.Vector3(1.2, 1, 1.2)));
+    } else {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 1.2, 8), darkMetalMat);
+      barrel.position.set(cx, 0.6, cz);
+      barrel.castShadow = true;
+      group.add(barrel);
+    }
+  }
+
+  // === ЯМА САРЛАККА ===
+  const pitX = -25, pitZ = -85;
+  // Кольцо из песка
+  const pitRing = new THREE.Mesh(
+    new THREE.TorusGeometry(5, 2, 8, 16), darkSandMat
+  );
+  pitRing.position.set(pitX, 0.3, pitZ);
+  pitRing.rotation.x = Math.PI / 2;
+  group.add(pitRing);
+  // Тёмная яма
+  const pit = new THREE.Mesh(new THREE.CylinderGeometry(4, 3, 1.5, 12), pitMat);
+  pit.position.set(pitX, -0.5, pitZ);
+  group.add(pit);
+  // Щупальца
+  for (let t = 0; t < 6; t++) {
+    const angle = (t / 6) * Math.PI * 2;
+    const tentacle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.15, 3, 5), pitMat);
+    tentacle.position.set(
+      pitX + Math.cos(angle) * 3,
+      1.2,
+      pitZ + Math.sin(angle) * 3
+    );
+    tentacle.rotation.x = (Math.random() - 0.5) * 0.8;
+    tentacle.rotation.z = (Math.random() - 0.5) * 0.8;
+    group.add(tentacle);
+  }
+  // Красный глаз в центре
+  const pitEye = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), glowRedMat);
+  pitEye.position.set(pitX, 0.1, pitZ);
+  group.add(pitEye);
+  const pitLight = new THREE.PointLight(0xff3300, 2, 12);
+  pitLight.position.set(pitX, 0.5, pitZ);
+  lights.push(pitLight);
+
+  // === РАЗБИТЫЙ ЗВЁЗДНЫЙ РАЗРУШИТЕЛЬ (нос торчит из песка) ===
+  const sdX = 35, sdZ = -80;
+  // Основной корпус (нос)
+  const sdHull = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 20), darkMetalMat);
+  sdHull.position.set(sdX, 1.5, sdZ);
+  sdHull.rotation.y = 0.3;
+  sdHull.rotation.z = -0.15;
+  sdHull.castShadow = true;
+  group.add(sdHull);
+  bodies.push(physics.createStaticBox(new THREE.Vector3(sdX, 1.5, sdZ), new THREE.Vector3(14, 5, 22)));
+
+  // Надстройка (мостик)
+  const sdBridge = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 5), metalMat);
+  sdBridge.position.set(sdX, 5, sdZ + 4);
+  sdBridge.rotation.y = 0.3;
+  sdBridge.castShadow = true;
+  group.add(sdBridge);
+
+  // Обшивка (боковые панели)
+  for (const s of [-1, 1]) {
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3, 16), rustMat);
+    panel.position.set(sdX + s * 6.2, 2.5, sdZ - 2);
+    panel.rotation.y = 0.3;
+    panel.castShadow = true;
+    group.add(panel);
+  }
+  // Двигатели (сзади)
+  for (let e = 0; e < 3; e++) {
+    const engine = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.5, 2, 8), darkMetalMat);
+    engine.position.set(sdX - 3 + e * 3, 2, sdZ + 11);
+    engine.rotation.x = Math.PI / 2;
+    group.add(engine);
+    const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0, 0.5, 8), glowRedMat);
+    glow.position.set(sdX - 3 + e * 3, 2, sdZ + 12.2);
+    glow.rotation.x = Math.PI / 2;
+    group.add(glow);
+  }
+  // Антенна
+  const sdAntenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 8, 4), metalMat);
+  sdAntenna.position.set(sdX, 7, sdZ + 4);
+  sdAntenna.rotation.z = 0.1;
+  group.add(sdAntenna);
+
+  // === ОАЗИС ===
+  const oasisX = -40, oasisZ = -25;
+  // Вода
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.1, 16), waterMat);
+  water.position.set(oasisX, 0.05, oasisZ);
+  group.add(water);
+  // Пальмы
+  for (let p = 0; p < 3; p++) {
+    const px = oasisX + (p - 1) * 4;
+    const pz = oasisZ + (Math.random() - 0.5) * 4;
+    const palm = new THREE.Group();
+    // Ствол
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 5, 6), new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 }));
+    trunk.position.y = 2.5;
+    trunk.rotation.z = (Math.random() - 0.5) * 0.3;
+    palm.add(trunk);
+    // Листья (4 штуки)
+    for (let l = 0; l < 4; l++) {
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 2.5), cactusMat);
+      leaf.position.set(0, 5, 0);
+      leaf.rotation.y = (l / 4) * Math.PI * 2;
+      leaf.rotation.x = 0.6;
+      palm.add(leaf);
+    }
+    palm.position.set(px, 0, pz);
+    group.add(palm);
+  }
+  // Камни вокруг оазиса
+  for (let r = 0; r < 6; r++) {
+    const angle = (r / 6) * Math.PI * 2;
+    const rx = oasisX + Math.cos(angle) * 6;
+    const rz = oasisZ + Math.sin(angle) * 6;
+    const stone = new THREE.Mesh(
+      new THREE.BoxGeometry(1 + Math.random(), 0.6 + Math.random() * 0.5, 1 + Math.random()), rockMat
+    );
+    stone.position.set(rx, 0.3, rz);
+    stone.rotation.y = Math.random() * Math.PI;
+    group.add(stone);
+  }
+
+  // === КАКТУСЫ ===
+  const cactusDefs = [
+    { x: 15, z: -10 }, { x: -18, z: -15 }, { x: 40, z: -45 },
+    { x: -35, z: -60 }, { x: 10, z: -95 }, { x: -45, z: -100 },
+    { x: 45, z: -20 }, { x: -50, z: -40 },
+  ];
+  for (const cd of cactusDefs) {
+    const cactus = new THREE.Group();
+    const h = 1.5 + Math.random() * 1.5;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, h, 6), cactusMat);
+    stem.position.y = h / 2;
+    cactus.add(stem);
+    // Ветки
+    if (Math.random() > 0.3) {
+      const bh = 0.6 + Math.random() * 0.6;
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, bh, 5), cactusMat);
+      branch.position.set(0.25, h * 0.6, 0);
+      branch.rotation.z = -0.8;
+      cactus.add(branch);
+    }
+    if (Math.random() > 0.5) {
+      const bh2 = 0.5 + Math.random() * 0.5;
+      const branch2 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, bh2, 5), cactusMat);
+      branch2.position.set(-0.2, h * 0.45, 0.1);
+      branch2.rotation.z = 0.7;
+      cactus.add(branch2);
+    }
+    cactus.position.set(cd.x, 0, cd.z);
+    group.add(cactus);
+  }
+
+  // === КОСТИ И ЧЕРЕПА ===
+  const boneDefs = [
+    { x: -10, z: -35 }, { x: 20, z: -70 }, { x: -30, z: -90 },
+    { x: 5, z: -15 }, { x: -20, z: -105 }, { x: 30, z: -50 },
+  ];
+  for (const bd of boneDefs) {
+    // Череп
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.25, 6, 5), boneMat);
+    skull.position.set(bd.x, 0.2, bd.z);
+    skull.scale.set(1, 0.8, 1.1);
+    group.add(skull);
+    // Глазницы
+    for (const s of [-1, 1]) {
+      const eyeSocket = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 4, 4),
+        new THREE.MeshBasicMaterial({ color: 0x111111 })
+      );
+      eyeSocket.position.set(bd.x + s * 0.08, 0.25, bd.z + 0.2);
+      group.add(eyeSocket);
+    }
+    // Кости рядом
+    for (let b = 0; b < 2; b++) {
+      const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.8, 4), boneMat);
+      bone.position.set(bd.x + (Math.random() - 0.5) * 1.5, 0.05, bd.z + 0.5 + b * 0.4);
+      bone.rotation.z = Math.PI / 2;
+      bone.rotation.y = Math.random() * Math.PI;
+      group.add(bone);
+    }
+  }
+
+  // === ОБЛОМКИ ТЕХНИКИ (улучшенные) ===
+  // Разбитый спидер
+  for (let i = 0; i < 4; i++) {
+    const wx = -15 + i * 12 + (Math.random() - 0.5) * 8;
+    const wz = -20 - i * 22;
     const wreck = new THREE.Group();
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(4, 1.5, 6), metalMat);
-    hull.position.y = 0.8;
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.2, 5.5), metalMat);
+    hull.position.y = 0.6;
     wreck.add(hull);
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 2), metalMat);
-    wing.position.set(0, 1.2, -1);
-    wing.rotation.z = (Math.random() - 0.5) * 0.5;
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(7, 0.15, 1.8), rustMat);
+    wing.position.set(0, 1, -0.8);
+    wing.rotation.z = (Math.random() - 0.5) * 0.6;
     wreck.add(wing);
+    // Кокпит
+    const cockpit = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 6, 5, 0, Math.PI * 2, 0, Math.PI * 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.2, metalness: 0.5 })
+    );
+    cockpit.position.set(0, 1.2, 1.5);
+    wreck.add(cockpit);
     wreck.position.set(wx, 0, wz);
     wreck.rotation.y = Math.random() * Math.PI;
     group.add(wreck);
-    bodies.push(physics.createStaticBox(new THREE.Vector3(wx, 1, wz), new THREE.Vector3(5, 2, 6)));
+    bodies.push(physics.createStaticBox(new THREE.Vector3(wx, 0.8, wz), new THREE.Vector3(4, 2, 6)));
   }
 
-  // Скелеты кораблей (рёбра торчат из песка)
-  for (let i = 0; i < 2; i++) {
-    const sx = -25 + i * 50;
-    const sz = -30 - i * 40;
-    for (let r = 0; r < 4; r++) {
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 0.3), metalMat);
-      rib.position.set(sx, 2, sz + r * 3);
-      rib.rotation.z = 0.3;
+  // === СКЕЛЕТЫ КОРАБЛЕЙ (рёбра торчат из песка) ===
+  for (let i = 0; i < 3; i++) {
+    const sx = -35 + i * 35;
+    const sz = -15 - i * 35;
+    for (let r = 0; r < 5; r++) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3 + Math.random() * 2, 0.25), rustMat);
+      rib.position.set(sx + (Math.random() - 0.5) * 2, 1.5, sz + r * 2.5);
+      rib.rotation.z = 0.2 + Math.random() * 0.3;
+      rib.rotation.x = (Math.random() - 0.5) * 0.2;
       group.add(rib);
     }
   }
 
-  // Освещение — яркое пустынное солнце
-  const hemi = new THREE.HemisphereLight(0xffeedd, 0xaa8855, 1.5);
+  // === ПЕСЧАНЫЕ ВИХРИ (декоративные столбы пыли) ===
+  for (let i = 0; i < 4; i++) {
+    const dx = (Math.random() - 0.5) * 80;
+    const dz = -20 - Math.random() * 80;
+    const dustMat = new THREE.MeshBasicMaterial({ color: 0xd4b87a, transparent: true, opacity: 0.12 });
+    const dust = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2, 8, 8, 1, true), dustMat);
+    dust.position.set(dx, 4, dz);
+    group.add(dust);
+  }
+
+  // === УКРЫТИЯ — песчаные баррикады ===
+  addCover(group, bodies, physics, rockMat, [
+    { x: 5, y: 0.7, z: -10, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -8, y: 0.7, z: -20, w: 2, h: 1.4, d: 2 },
+    { x: 12, y: 0.7, z: -32, w: 3, h: 1.4, d: 1.2 },
+    { x: -5, y: 0.7, z: -42, w: 2.5, h: 1.4, d: 1.5 },
+    { x: 8, y: 0.7, z: -50, w: 2, h: 1.4, d: 2 },
+    { x: -12, y: 0.7, z: -62, w: 3, h: 1.4, d: 1 },
+    { x: 6, y: 0.7, z: -72, w: 2.5, h: 1.4, d: 1.5 },
+    { x: -8, y: 0.7, z: -80, w: 2, h: 1.4, d: 2 },
+    { x: 10, y: 0.7, z: -90, w: 3, h: 1.4, d: 1.2 },
+    { x: -6, y: 0.7, z: -100, w: 2.5, h: 1.4, d: 1.5 },
+    { x: 0, y: 0.7, z: -108, w: 2, h: 1.4, d: 2 },
+  ]);
+
+  // === ОСВЕЩЕНИЕ — яркое пустынное солнце с дополнительными акцентами ===
+  const hemi = new THREE.HemisphereLight(0xffeedd, 0xaa8855, 1.6);
   lights.push(hemi);
-  const amb = new THREE.AmbientLight(0xffddaa, 0.6);
+  const amb = new THREE.AmbientLight(0xffddaa, 0.5);
   lights.push(amb);
-  const dir = new THREE.DirectionalLight(0xfff0cc, 2.0);
+  const dir = new THREE.DirectionalLight(0xfff0cc, 2.2);
   dir.position.set(15, 25, 10);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
@@ -1079,6 +1575,21 @@ export function createDesertPlanet(scene: THREE.Scene, physics: PhysicsSystem): 
   dir.shadow.camera.top = 60; dir.shadow.camera.bottom = -60;
   dir.shadow.camera.far = 100;
   lights.push(dir);
+
+  // Второй направленный свет (заполняющий, с другой стороны)
+  const fillDir = new THREE.DirectionalLight(0xffcc88, 0.4);
+  fillDir.position.set(-20, 15, -40);
+  lights.push(fillDir);
+
+  // Тёплые точечные у поселения
+  const townLight = new THREE.PointLight(0xff9944, 1.5, 25);
+  townLight.position.set(townX, 4, townZ);
+  lights.push(townLight);
+
+  // Голубой свет у оазиса
+  const oasisLight = new THREE.PointLight(0x44aadd, 1.5, 15);
+  oasisLight.position.set(oasisX, 2, oasisZ);
+  lights.push(oasisLight);
 
   scene.add(group);
   for (const l of lights) scene.add(l);
@@ -1104,6 +1615,13 @@ export function createDesertPlanet(scene: THREE.Scene, physics: PhysicsSystem): 
       new THREE.Vector3(-20, 2, -85), new THREE.Vector3(5, 2, -110),
       new THREE.Vector3(-5, 2, -112), new THREE.Vector3(0, 2, -58),
       new THREE.Vector3(12, 2, -28), new THREE.Vector3(-12, 2, -65),
+    ],
+    turrets: [
+      new THREE.Vector3(-15, 1, -20),
+      new THREE.Vector3(15, 1, -40),
+      new THREE.Vector3(-10, 1, -65),
+      new THREE.Vector3(10, 1, -85),
+      new THREE.Vector3(0, 1, -105),
     ],
   };
 }

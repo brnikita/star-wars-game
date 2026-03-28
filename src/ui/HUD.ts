@@ -14,6 +14,7 @@ export class HUD {
   private reloadIndicator!: HTMLElement;
   private levelIndicator!: HTMLElement;
   private levelNameIndicator!: HTMLElement;
+  private coverIndicator!: HTMLElement;
   private levelOverlay!: HTMLElement;
   private levelOverlayTitle!: HTMLElement;
   private levelOverlaySubtitle!: HTMLElement;
@@ -94,6 +95,32 @@ export class HUD {
         @keyframes blink {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.3; }
+        }
+        .hud-cover {
+          position: absolute;
+          bottom: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: none;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          pointer-events: none;
+        }
+        .hud-cover.visible {
+          display: flex;
+        }
+        .hud-cover-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 3px;
+          color: #44cc88;
+        }
+        .hud-cover-regen {
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #33aa66;
+          animation: blink 1s infinite;
         }
         .hud-crosshair {
           position: absolute;
@@ -261,6 +288,15 @@ export class HUD {
             width: 20px;
             height: 20px;
           }
+          .hud-cover {
+            bottom: 80px;
+          }
+          .hud-cover-label {
+            font-size: 9px;
+          }
+          .hud-cover-regen {
+            font-size: 8px;
+          }
         }
       </style>
 
@@ -289,6 +325,11 @@ export class HUD {
         <div class="hud-crosshair-dot"></div>
       </div>
 
+      <div class="hud-cover" id="hud-cover">
+        <div class="hud-cover-label">Укрытие</div>
+        <div class="hud-cover-regen" id="hud-cover-regen">+ восстановление</div>
+      </div>
+
       <div class="hud-damage-overlay" id="hud-damage-overlay"></div>
 
       <div class="hud-kills">
@@ -309,6 +350,7 @@ export class HUD {
     this.shieldFill = document.getElementById('hud-shield-fill')!;
     this.ammoDisplay = document.getElementById('hud-ammo-count')!;
     this.crosshair = document.getElementById('hud-crosshair')!;
+    this.coverIndicator = document.getElementById('hud-cover')!;
     this.damageOverlay = document.getElementById('hud-damage-overlay')!;
     this.killCounter = document.getElementById('hud-kills-count')!;
     this.reloadIndicator = document.getElementById('hud-reload')!;
@@ -338,6 +380,18 @@ export class HUD {
 
     // Индикатор перезарядки
     this.reloadIndicator.style.display = player.isReloading ? 'block' : 'none';
+
+    // Индикатор укрытия
+    if (player.isCrouching) {
+      this.coverIndicator.classList.add('visible');
+      // Показать "восстановление" если HP < max
+      const regenEl = document.getElementById('hud-cover-regen');
+      if (regenEl) {
+        regenEl.style.display = player.health < player.maxHealth ? 'block' : 'none';
+      }
+    } else {
+      this.coverIndicator.classList.remove('visible');
+    }
 
     // Индикатор урона (красная виньетка)
     const timeSinceHit = performance.now() - combat.lastHitTime;
