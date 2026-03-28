@@ -24,6 +24,7 @@ export class MobileTouchControls {
   isJumping = false;
   isReloading = false;
   isMelee = false;
+  isCover = false;
 
   private container: HTMLElement;
   private joystickBase: HTMLElement;
@@ -36,6 +37,7 @@ export class MobileTouchControls {
   private jumpTouchId: number | null = null;
   private reloadTouchId: number | null = null;
   private meleeTouchId: number | null = null;
+  private coverTouchId: number | null = null;
 
   private boundTouchStart: (e: TouchEvent) => void;
   private boundTouchMove: (e: TouchEvent) => void;
@@ -86,9 +88,10 @@ export class MobileTouchControls {
   }
 
   private createButtons(): void {
-    const defs: { label: string; color: string; size: number; key: 'shoot' | 'jump' | 'reload' | 'melee' }[] = [
+    const defs: { label: string; color: string; size: number; key: 'shoot' | 'jump' | 'reload' | 'melee' | 'cover' }[] = [
       { label: '\u25CF', color: 'rgba(255,60,60,0.6)', size: 70, key: 'shoot' },
       { label: '\u25B2', color: 'rgba(60,120,255,0.6)', size: 56, key: 'jump' },
+      { label: 'C', color: 'rgba(60,200,120,0.6)', size: 50, key: 'cover' },
       { label: 'R', color: 'rgba(240,200,40,0.6)', size: 50, key: 'reload' },
       { label: 'M', color: 'rgba(240,150,40,0.6)', size: 50, key: 'melee' },
     ];
@@ -252,6 +255,10 @@ export class MobileTouchControls {
         this.isMelee = pressed;
         this.meleeTouchId = pressed ? touchId : null;
         break;
+      case 'cover':
+        this.isCover = pressed;
+        this.coverTouchId = pressed ? touchId : null;
+        break;
     }
   }
 
@@ -271,6 +278,10 @@ export class MobileTouchControls {
     if (this.meleeTouchId === touchId) {
       this.isMelee = false;
       this.meleeTouchId = null;
+    }
+    if (this.coverTouchId === touchId) {
+      this.isCover = false;
+      this.coverTouchId = null;
     }
   }
 

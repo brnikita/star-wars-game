@@ -5,6 +5,7 @@ import {
   CAMERA_DISTANCE, CAMERA_HEIGHT, CAMERA_LERP_SPEED,
   CAMERA_AIM_DISTANCE, CAMERA_AIM_OFFSET_X,
   CAMERA_MIN_PITCH, CAMERA_MAX_PITCH,
+  K2SO_CROUCH_HEIGHT_SCALE,
 } from '../utils/Constants';
 import { lerp, clamp } from '../utils/MathUtils';
 
@@ -54,9 +55,10 @@ export class CameraSystem {
     this.currentDistance = lerp(this.currentDistance, targetDist, dt * 8);
     this.currentOffsetX = lerp(this.currentOffsetX, targetOffsetX, dt * 8);
 
-    // Позиция цели (чуть выше центра персонажа)
+    // Позиция цели (чуть выше центра персонажа, ниже при приседании)
     const playerPos = this.target.getPosition();
-    this.targetPos.set(playerPos.x, playerPos.y + CAMERA_HEIGHT * 0.4, playerPos.z);
+    const crouchMult = this.target.isCrouching ? K2SO_CROUCH_HEIGHT_SCALE : 1;
+    this.targetPos.set(playerPos.x, playerPos.y + CAMERA_HEIGHT * 0.4 * crouchMult, playerPos.z);
 
     // Вычисляем желаемую позицию камеры (сферические координаты)
     const offsetX = Math.sin(this.yaw) * Math.cos(this.pitch) * this.currentDistance;

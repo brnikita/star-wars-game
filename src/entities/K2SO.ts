@@ -7,6 +7,8 @@ import {
   K2SO_HEIGHT, K2SO_WALK_SPEED, K2SO_RUN_SPEED, K2SO_JUMP_FORCE,
   K2SO_MAX_HEALTH, K2SO_MAX_SHIELD, K2SO_SHIELD_REGEN_RATE,
   K2SO_SHIELD_REGEN_DELAY, BLASTER_AMMO_MAX,
+  K2SO_CROUCH_SPEED_MULT, K2SO_CROUCH_HEIGHT_SCALE,
+  K2SO_COVER_HEALTH_REGEN_RATE, K2SO_COVER_HEALTH_REGEN_DELAY,
   COLOR_K2SO_BODY, COLOR_K2SO_EYES,
 } from '../utils/Constants';
 import { clamp } from '../utils/MathUtils';
@@ -19,8 +21,11 @@ export class K2SO extends Entity {
   maxAmmo: number;
   isReloading = false;
   reloadTimer = 0;
+  isCrouching = false;
 
   private shieldRegenTimer = 0;
+  private healthRegenTimer = 0;
+  private crouchLerp = 0; // 0 = стоя, 1 = присед (для плавной анимации)
 
   // Управление
   cameraYaw = 0;
@@ -562,9 +567,11 @@ export class K2SO extends Entity {
   }
 
   update(dt: number, input: InputManager): void {
+    this.handleCrouch(dt, input);
     this.handleMovement(dt, input);
     this.handleReloading(dt);
     this.regenerateShield(dt);
+    this.regenerateHealth(dt);
     this.animateLimbs(dt, input);
     this.syncMeshToBody();
 
@@ -595,7 +602,8 @@ export class K2SO extends Entity {
       this.moveDirection.normalize();
     }
 
-    const speed = input.sprint ? K2SO_RUN_SPEED : K2SO_WALK_SPEED;
+    let speed = input.sprint ? K2SO_RUN_SPEED : K2SO_WALK_SPEED;
+    if (this.isCrouching) speed *= K2SO_CROUCH_SPEED_MULT;
 
     // Пробуждаем тело и задаём скорость
     this.body.wakeUp();
@@ -651,8 +659,35 @@ export class K2SO extends Entity {
     }
   }
 
+  private handleCrouch(dt: number, input: InputManager): void {
+    this.isCrouching = input.cover;
+
+    // Плавная интерполяция приседания
+    const target = this.isCrouching ? 1 : 0;
+    this.crouchLerp += (target - this.crouchLerp) * Math.min(dt * 10, 1);
+
+    // Масштаб модели по Y
+    const scaleY = 1 - this.crouchLerp * (1 - K2SO_CROUCH_HEIGHT_SCALE);
+    const modelRoot = this.mesh.children[0];
+    if (modelRoot) {
+      modelRoot.scale.y = scaleY;
+    }
+  }
+
+  private regenerateHealth(dt: number): void {
+    if (!this.isCrouching) return;
+    if (this.healthRegenTimer > 0) {
+      this.healthRegenTimer -= dt;
+      return;
+    }
+    if (this.health < this.maxHealth) {
+      this.health = Math.min(this.maxHealth, this.health + K2SO_COVER_HEALTH_REGEN_RATE * dt);
+    }
+  }
+
   override takeDamage(amount: number): void {
     this.shieldRegenTimer = K2SO_SHIELD_REGEN_DELAY;
+    this.healthRegenTimer = K2SO_COVER_HEALTH_REGEN_DELAY;
 
     // Сначала щит поглощает урон
     if (this.shield > 0) {
@@ -707,6 +742,9 @@ export class K2SO extends Entity {
     this.ammo = this.maxAmmo;
     this.isReloading = false;
     this.reloadTimer = 0;
+    this.isCrouching = false;
+    this.crouchLerp = 0;
+    this.healthRegenTimer = 0;
     this.isDead = false;
     this.body.position.set(position.x, position.y, position.z);
     this.body.velocity.set(0, 0, 0);

@@ -166,6 +166,14 @@ export class InputManager {
     );
   }
 
+  // Укрытие (приседание)
+  get cover(): boolean {
+    return (
+      this.isKeyDown('KeyC') ||
+      (this.touchControls !== null && this.touchControls.isCover)
+    );
+  }
+
   // Сброс дельты мыши в конце кадра
   resetMouseDelta(): void {
     this._mouseDeltaX = 0;

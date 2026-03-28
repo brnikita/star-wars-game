@@ -1,5 +1,7 @@
 import { Game } from './core/Game';
 
+
+
 async function main(): Promise<void> {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 
