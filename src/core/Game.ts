@@ -4,7 +4,9 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { CameraSystem } from '../systems/CameraSystem';
 import { CombatSystem } from '../systems/CombatSystem';
 import { K2SO } from '../entities/K2SO';
+import { Enemy } from '../entities/Enemy';
 import { Stormtrooper } from '../entities/Stormtrooper';
+import { TurretDroid } from '../entities/TurretDroid';
 import { HUD } from '../ui/HUD';
 import { createTestLevel, GrievousRef } from '../levels/TestLevel';
 import {
@@ -41,7 +43,7 @@ export class Game {
   combat: CombatSystem;
   hud: HUD;
   player!: K2SO;
-  enemies: Stormtrooper[] = [];
+  enemies: Enemy[] = [];
   clock: THREE.Clock;
 
   private accumulator = 0;
@@ -59,6 +61,9 @@ export class Game {
   private shipLights: THREE.Light[] = [];
   // Освещение уровня 1 (базовое)
   private baseLights: THREE.Light[] = [];
+  // Укрытия корабельных уровней (для очистки)
+  private coverMeshes: THREE.Mesh[] = [];
+  private coverBodies: import('cannon-es').Body[] = [];
 
   private grievousRef: GrievousRef | null = null;
   private grievousWaking = false;
@@ -171,6 +176,22 @@ export class Game {
         new THREE.Vector3(2, 2, -140),
       ];
       this.spawnEnemies(enemies);
+      this.spawnTurrets([
+        new THREE.Vector3(0, 1, -55),
+        new THREE.Vector3(-2, 1, -120),
+      ]);
+      // Укрытия в коридоре корабля
+      this.spawnCover([
+        { pos: new THREE.Vector3(3, 0.6, -10), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(-3, 0.6, -28), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(2, 0.6, -48), size: new THREE.Vector3(2, 1.2, 1) },
+        { pos: new THREE.Vector3(-2, 0.6, -60), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(3, 0.6, -80), size: new THREE.Vector3(1.5, 1.2, 1) },
+        { pos: new THREE.Vector3(-3, 0.6, -90), size: new THREE.Vector3(2, 1.2, 1.5) },
+        { pos: new THREE.Vector3(0, 0.6, -110), size: new THREE.Vector3(3, 1.2, 1) },
+        { pos: new THREE.Vector3(-2, 0.6, -130), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(2, 0.6, -150), size: new THREE.Vector3(1.5, 1.2, 1) },
+      ]);
       return;
     }
 
@@ -187,6 +208,32 @@ export class Game {
         new THREE.Vector3(2, 2, -100), new THREE.Vector3(-2, 2, -140),
       ];
       this.spawnEnemies(enemies);
+      this.spawnTurrets([
+        new THREE.Vector3(0, 1, -175),
+        new THREE.Vector3(-6, 1, -190),
+        new THREE.Vector3(6, 1, -198),
+        new THREE.Vector3(0, 1, -208),
+        new THREE.Vector3(-10, 1, -183),
+        new THREE.Vector3(10, 1, -203),
+      ]);
+      // Укрытия на финальном уровне (коридор + комната Гривуса)
+      this.spawnCover([
+        { pos: new THREE.Vector3(3, 0.6, -12), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(-3, 0.6, -35), size: new THREE.Vector3(1.5, 1.2, 1) },
+        { pos: new THREE.Vector3(2, 0.6, -60), size: new THREE.Vector3(2, 1.2, 1) },
+        { pos: new THREE.Vector3(-2, 0.6, -90), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(0, 0.6, -120), size: new THREE.Vector3(3, 1.2, 1) },
+        { pos: new THREE.Vector3(-3, 0.6, -145), size: new THREE.Vector3(1.5, 1.2, 1.5) },
+        { pos: new THREE.Vector3(3, 0.6, -160), size: new THREE.Vector3(2, 1.2, 1) },
+        // Комната Гривуса — укрытия побольше
+        { pos: new THREE.Vector3(8, 0.8, -178), size: new THREE.Vector3(2.5, 1.6, 2) },
+        { pos: new THREE.Vector3(-8, 0.8, -178), size: new THREE.Vector3(2.5, 1.6, 2) },
+        { pos: new THREE.Vector3(5, 0.8, -192), size: new THREE.Vector3(2, 1.6, 2.5) },
+        { pos: new THREE.Vector3(-5, 0.8, -192), size: new THREE.Vector3(2, 1.6, 2.5) },
+        { pos: new THREE.Vector3(0, 0.8, -200), size: new THREE.Vector3(3, 1.6, 1.5) },
+        { pos: new THREE.Vector3(10, 0.8, -205), size: new THREE.Vector3(2, 1.6, 2) },
+        { pos: new THREE.Vector3(-10, 0.8, -205), size: new THREE.Vector3(2, 1.6, 2) },
+      ]);
       return;
     }
 
@@ -220,6 +267,11 @@ export class Game {
 
     // Заспавнить врагов
     this.spawnEnemies(data.enemies);
+
+    // Заспавнить турели (если есть)
+    if (data.turrets) {
+      this.spawnTurrets(data.turrets);
+    }
 
     // Сбросить позицию игрока
     this.player.reset(data.playerSpawn.clone());
@@ -291,6 +343,41 @@ export class Game {
     }
   }
 
+  private spawnTurrets(positions: THREE.Vector3[]): void {
+    for (const pos of positions) {
+      const turret = new TurretDroid(this.scene, this.physics);
+      turret.spawn(pos.clone());
+      this.enemies.push(turret);
+    }
+  }
+
+  private static coverMat: THREE.MeshStandardMaterial | null = null;
+
+  private spawnCover(defs: { pos: THREE.Vector3; size: THREE.Vector3 }[]): void {
+    if (!Game.coverMat) {
+      Game.coverMat = new THREE.MeshStandardMaterial({ color: 0x4a4a55, roughness: 0.4, metalness: 0.6 });
+    }
+    for (const d of defs) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(d.size.x, d.size.y, d.size.z), Game.coverMat
+      );
+      mesh.position.copy(d.pos);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.scene.add(mesh);
+      this.coverMeshes.push(mesh);
+      const body = this.physics.createStaticBox(d.pos, d.size);
+      this.coverBodies.push(body);
+    }
+  }
+
+  private clearCover(): void {
+    for (const m of this.coverMeshes) this.scene.remove(m);
+    for (const b of this.coverBodies) this.physics.removeBody(b);
+    this.coverMeshes = [];
+    this.coverBodies = [];
+  }
+
   private async updateLoadingBar(percent: number): Promise<void> {
     const bar = document.getElementById('loading-bar');
     if (bar) bar.style.width = `${percent}%`;
@@ -309,9 +396,11 @@ export class Game {
           setTimeout(() => screen.style.display = 'none', 500);
         }
         window.removeEventListener('click', handler);
+        window.removeEventListener('touchend', handler);
         resolve();
       };
       window.addEventListener('click', handler);
+      window.addEventListener('touchend', handler);
     });
   }
 
@@ -428,6 +517,7 @@ export class Game {
       if (!hasNextLevel) return;
 
       window.removeEventListener('click', this.levelTransitionHandler!);
+      window.removeEventListener('touchend', this.levelTransitionHandler!);
       this.levelTransitionHandler = null;
       this.startNextLevel();
     };
@@ -435,6 +525,7 @@ export class Game {
     setTimeout(() => {
       if (this.levelTransitionHandler) {
         window.addEventListener('click', this.levelTransitionHandler);
+        window.addEventListener('touchend', this.levelTransitionHandler);
       }
     }, 500);
   }
@@ -446,6 +537,7 @@ export class Game {
 
     this.levelTransitionHandler = () => {
       window.removeEventListener('click', this.levelTransitionHandler!);
+      window.removeEventListener('touchend', this.levelTransitionHandler!);
       this.levelTransitionHandler = null;
       this.restartLevel();
     };
@@ -453,6 +545,7 @@ export class Game {
     setTimeout(() => {
       if (this.levelTransitionHandler) {
         window.addEventListener('click', this.levelTransitionHandler);
+        window.addEventListener('touchend', this.levelTransitionHandler);
       }
     }, 500);
   }
@@ -463,6 +556,9 @@ export class Game {
       e.dispose(this.scene, this.physics);
     }
     this.enemies = [];
+
+    // Удалить укрытия корабельных уровней
+    this.clearCover();
 
     // Сброс боевой системы
     this.combat.reset();
@@ -494,6 +590,9 @@ export class Game {
       e.dispose(this.scene, this.physics);
     }
     this.enemies = [];
+
+    // Удалить укрытия корабельных уровней
+    this.clearCover();
 
     // Сброс боевой системы
     this.combat.reset();

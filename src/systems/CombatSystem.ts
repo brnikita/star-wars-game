@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { InputManager } from '../core/InputManager';
 import { K2SO } from '../entities/K2SO';
-import { Stormtrooper } from '../entities/Stormtrooper';
+import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import { PhysicsSystem } from './PhysicsSystem';
 import {
@@ -34,7 +34,7 @@ export class CombatSystem {
     private physics: PhysicsSystem
   ) {}
 
-  update(dt: number, player: K2SO, enemies: Stormtrooper[], input: InputManager): void {
+  update(dt: number, player: K2SO, enemies: Enemy[], input: InputManager): void {
     this.playerFireTimer -= dt;
     this.meleeTimer -= dt;
 
@@ -87,19 +87,19 @@ export class CombatSystem {
     this.projectiles.push(projectile);
   }
 
-  private enemyShoot(enemy: Stormtrooper): void {
+  private enemyShoot(enemy: Enemy): void {
     const projectile = new Projectile(
       this.scene,
       enemy.shootOrigin.clone(),
       enemy.shootDirection.clone(),
-      COLOR_BLASTER_ENEMY,
-      5,
+      enemy.shootColor,
+      enemy.shootDamage,
       false
     );
     this.projectiles.push(projectile);
   }
 
-  private meleeAttack(player: K2SO, enemies: Stormtrooper[]): void {
+  private meleeAttack(player: K2SO, enemies: Enemy[]): void {
     const playerPos = player.getPosition();
 
     for (const enemy of enemies) {
@@ -119,7 +119,7 @@ export class CombatSystem {
     }
   }
 
-  private updateProjectiles(dt: number, player: K2SO, enemies: Stormtrooper[]): void {
+  private updateProjectiles(dt: number, player: K2SO, enemies: Enemy[]): void {
     for (const proj of this.projectiles) {
       proj.update(dt);
 
@@ -142,10 +142,11 @@ export class CombatSystem {
           }
         }
       } else {
-        // Проверка попадания в игрока
+        // Проверка попадания в игрока (радиус меньше при приседании)
         const playerPos = player.getPosition();
         const dist = projPos.distanceTo(playerPos);
-        if (dist < 0.6) {
+        const hitRadius = player.isCrouching ? 0.4 : 0.6;
+        if (dist < hitRadius) {
           player.takeDamage(proj.damage);
           proj.isDead = true;
           this.lastHitTime = performance.now();
