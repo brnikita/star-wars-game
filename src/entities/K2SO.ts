@@ -39,6 +39,7 @@ export class K2SO extends Entity {
   private gingerHead: THREE.Group | null = null;
   private gingerButtons: THREE.Mesh[] = [];
   private rabbitHead: THREE.Group | null = null;
+  private mantisHead: THREE.Group | null = null;
   private beaverTail: THREE.Group | null = null;
   private neckGroupRef: THREE.Group | null = null;
   private skinMeshes: THREE.Mesh[] = []; // все перекрашиваемые части
@@ -1479,6 +1480,86 @@ export class K2SO extends Entity {
     this.rabbitHead.scale.set(1.15, 1.15, 1.15);
     modelRoot.add(this.rabbitHead);
 
+    // === Голова железного богомола (скрыта по умолчанию) ===
+    this.mantisHead = new THREE.Group();
+    this.mantisHead.visible = false;
+
+    const mArmorMat = new THREE.MeshPhysicalMaterial({ color: 0x666670, metalness: 0.85, roughness: 0.2, clearcoat: 0.3 });
+    const mDarkMat = new THREE.MeshPhysicalMaterial({ color: 0x444450, metalness: 0.9, roughness: 0.15 });
+    const mEyeMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 4.0 });
+    const mEyeGlowMat = new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0xff2200, emissiveIntensity: 0.6, transparent: true, opacity: 0.3 });
+    const mBladeMat = new THREE.MeshPhysicalMaterial({ color: 0x555560, metalness: 0.98, roughness: 0.05, clearcoat: 0.6 });
+    const mJointMat = new THREE.MeshStandardMaterial({ color: 0x333338, metalness: 0.95, roughness: 0.1 });
+
+    // Череп (треугольный, насекомый)
+    const mSkull = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.3, 4), mArmorMat);
+    mSkull.rotation.x = Math.PI / 2;
+    mSkull.rotation.z = Math.PI / 4;
+    mSkull.scale.set(0.85, 1.1, 1.0);
+    this.mantisHead.add(mSkull);
+
+    // Лицевая пластина
+    const mFace = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.18, 0.12), mDarkMat);
+    mFace.position.set(0, -0.02, 0.1);
+    this.mantisHead.add(mFace);
+
+    // Большие фасеточные глаза (красные)
+    for (const s of [-1, 1]) {
+      const mEye = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), mEyeMat);
+      mEye.position.set(s * 0.11, 0.02, 0.14);
+      mEye.scale.set(1.2, 0.85, 0.6);
+      this.mantisHead.add(mEye);
+
+      // Фасетки
+      for (let f = 0; f < 5; f++) {
+        const facet = new THREE.Mesh(new THREE.SphereGeometry(0.012, 4, 4), mEyeMat);
+        facet.position.set(s * 0.11 + Math.cos(f * 1.2) * 0.035, 0.02 + Math.sin(f * 1.2) * 0.025, 0.18);
+        this.mantisHead.add(facet);
+      }
+
+      // Свечение
+      const mGlow = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), mEyeGlowMat);
+      mGlow.position.set(s * 0.11, 0.02, 0.13);
+      this.mantisHead.add(mGlow);
+    }
+
+    // Антенны
+    for (const s of [-1, 1]) {
+      const mAntenna = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.004, 0.5, 4), mJointMat);
+      mAntenna.position.set(s * 0.07, 0.14, -0.04);
+      mAntenna.rotation.z = s * 0.3;
+      mAntenna.rotation.x = -0.4;
+      this.mantisHead.add(mAntenna);
+      const mTip = new THREE.Mesh(new THREE.SphereGeometry(0.01, 4, 4),
+        new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0xff0000, emissiveIntensity: 0.5 }));
+      mTip.position.set(s * (0.07 + 0.12 * Math.sin(0.3)), 0.38, -0.18);
+      this.mantisHead.add(mTip);
+    }
+
+    // Жвалы (челюсти)
+    for (const s of [-1, 1]) {
+      const mJaw = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.025, 0.13), mBladeMat);
+      mJaw.position.set(s * 0.07, -0.09, 0.16);
+      mJaw.rotation.y = s * 0.3;
+      this.mantisHead.add(mJaw);
+      // Зубец на конце
+      const mTooth = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.04, 3), mBladeMat);
+      mTooth.position.set(s * 0.05, -0.09, 0.23);
+      mTooth.rotation.x = Math.PI / 2;
+      this.mantisHead.add(mTooth);
+    }
+
+    // Шейные сегменты (сзади)
+    for (let i = 0; i < 3; i++) {
+      const neckSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.06, 6), mDarkMat);
+      neckSeg.position.set(0, -0.06 - i * 0.06, -0.08 - i * 0.04);
+      this.mantisHead.add(neckSeg);
+    }
+
+    this.mantisHead.position.y = 0.98;
+    this.mantisHead.scale.set(1.15, 1.15, 1.15);
+    modelRoot.add(this.mantisHead);
+
     // === Реактивное пламя из-под ступней (для полёта) ===
     const createFootFlame = (): THREE.Group => {
       const flameGroup = new THREE.Group();
@@ -1982,7 +2063,7 @@ export class K2SO extends Entity {
     this.skinCooldown -= dt;
     if (input.switchSkin && this.skinCooldown <= 0) {
       this.skinCooldown = 0.5;
-      const maxSkins = this.bossDefeated ? 8 : 7;
+      const maxSkins = this.bossDefeated ? 9 : 8;
       this.currentSkin = (this.currentSkin + 1) % maxSkins;
       this.applySkin();
     }
@@ -2008,7 +2089,7 @@ export class K2SO extends Entity {
       this.eyeLightRef.color.setHex(hex);
     };
 
-    const SKIN_NAMES = ['K-2SO', 'Убойный робот', 'Бобр', 'Скелет', 'Пряник', 'Розовый робот', 'Голубой заяц', 'R-111 [БОСС]'];
+    const SKIN_NAMES = ['K-2SO', 'Убойный робот', 'Бобр', 'Скелет', 'Пряник', 'Розовый робот', 'Голубой заяц', 'Железный богомол', 'R-111 [БОСС]'];
 
     // Скрыть всё по умолчанию
     if (this.bearHead) this.bearHead.visible = false;
@@ -2016,6 +2097,7 @@ export class K2SO extends Entity {
     if (this.skullHead) this.skullHead.visible = false;
     if (this.gingerHead) this.gingerHead.visible = false;
     if (this.rabbitHead) this.rabbitHead.visible = false;
+    if (this.mantisHead) this.mantisHead.visible = false;
     this.gingerButtons.forEach(b => b.visible = false);
     this.headRef.visible = true;
     if (this.neckGroupRef) this.neckGroupRef.visible = true;
@@ -2090,6 +2172,18 @@ export class K2SO extends Entity {
       if (this.rabbitHead) this.rabbitHead.visible = true;
 
     } else if (this.currentSkin === 7) {
+      // Железный богомол — серое тело, голова богомола, красные глаза
+      setEyeColor(0xff0000);
+      this.skinMeshes.forEach(m => {
+        (m.material as THREE.MeshStandardMaterial).color.setHex(0x666670);
+        (m.material as THREE.MeshStandardMaterial).metalness = 0.7;
+        (m.material as THREE.MeshStandardMaterial).roughness = 0.25;
+      });
+      this.headRef.visible = false;
+      if (this.neckGroupRef) this.neckGroupRef.visible = false;
+      if (this.mantisHead) this.mantisHead.visible = true;
+
+    } else if (this.currentSkin === 8) {
       // R-111 — скин босса (тёмная броня, красные глаза, способности босса)
       setEyeColor(0xff0000);
       this.skinMeshes.forEach(m => {
@@ -2106,7 +2200,7 @@ export class K2SO extends Entity {
     }
 
     // Способности R-111: усиленные характеристики
-    if (this.currentSkin === 7) {
+    if (this.currentSkin === 8) {
       this.maxHealth = 250;
       this.health = Math.min(this.health, this.maxHealth);
       if (this.health <= 0) this.health = this.maxHealth;

@@ -7,7 +7,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { distanceXZ } from '../utils/MathUtils';
 
 // Мини-босс Богомол — параметры
-const MANTIS_HEALTH = 350;
+const MANTIS_HEALTH = 60;
 const MANTIS_SPEED = 7;
 const MANTIS_DETECT_RANGE = 50;
 const MANTIS_ATTACK_RANGE = 45;

@@ -56,6 +56,8 @@ export class Game {
   private movingCars: MovingCar[] = [];
   private trafficLights: TrafficLight[] = [];
   private pedTime = 0;
+  private _pedMeshCache: THREE.Group[] = [];
+  private _pedMeshCacheLen = 0;
   private audioListener: THREE.AudioListener | null = null;
   private pedScreamTimer = 0;
 
@@ -578,9 +580,13 @@ export class Game {
     this.hud.update(this.player, this.combat);
     this.hud.updateMinimap(this.player, this.enemies);
 
-    const pedMeshes = this.pedestrians.map(p => p.mesh);
+    // Кешируем массив мешей прохожих (не создаём каждый кадр)
+    if (!this._pedMeshCache || this._pedMeshCacheLen !== this.pedestrians.length) {
+      this._pedMeshCache = this.pedestrians.map(p => p.mesh);
+      this._pedMeshCacheLen = this.pedestrians.length;
+    }
     for (const enemy of this.enemies) {
-      enemy.update(dt, this.player, pedMeshes);
+      enemy.update(dt, this.player, this._pedMeshCache);
     }
 
     // Анимация прохожих, машин, светофоров

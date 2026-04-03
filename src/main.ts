@@ -1,4 +1,7 @@
 import { Game } from './core/Game';
+import { generateFavicon } from './favicon';
+
+try { generateFavicon(); } catch (_e) { /* ok */ }
 
 async function main(): Promise<void> {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;

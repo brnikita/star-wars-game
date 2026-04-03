@@ -155,6 +155,7 @@ export function playCredits(): Promise<void> {
 
       { type: 'title', text: 'СПАСИБО ЗА ИГРУ' },
       { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
       { type: 'subtitle', text: '«Вероятность того, что вам понравилось —' },
       { type: 'subtitle', text: 'недостаточно данных для подсчёта.»' },
       { type: 'gap', text: '' },
@@ -163,10 +164,61 @@ export function playCredits(): Promise<void> {
       { type: 'gap', text: '' },
       { type: 'gap', text: '' },
       { type: 'gap', text: '' },
+
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+
+      { type: 'detail', text: 'НейроСити — 2148' },
+      { type: 'detail', text: 'Город, который стоит того, чтобы его спасти' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
       { type: 'gap', text: '' },
 
       { type: 'title', text: 'УБОЙНЫЙ РОБОТ' },
       { type: 'subtitle', text: '2148' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
+      { type: 'gap', text: '' },
     ];
 
     // Стили для типов
@@ -177,6 +229,7 @@ export function playCredits(): Promise<void> {
       role: 'font-size:20px;color:#2288ff;margin:5px 0;',
       name: 'font-size:20px;color:#cccccc;margin:4px 0;',
       detail: 'font-size:16px;color:#777777;margin:3px 0;font-style:italic;',
+      song: 'font-size:22px;color:#aabbdd;margin:6px 0;font-style:italic;text-shadow:0 0 10px rgba(100,150,255,0.3);',
       gap: 'height:25px;',
     };
 
@@ -191,11 +244,195 @@ export function playCredits(): Promise<void> {
       creditsContainer.appendChild(el);
     }
 
-    const totalCreditsH = creditsContainer.scrollHeight + H;
-    const scrollSpeed = 50; // пикселей в секунду
-    const TOTAL = (totalCreditsH / scrollSpeed) * 1000;
+    const TOTAL_SEC = 180; // 3 минуты
+    const TOTAL = TOTAL_SEC * 1000;
+    const totalCreditsH = creditsContainer.scrollHeight + H * 2;
+    const scrollSpeed = totalCreditsH / TOTAL_SEC;
+
+    // === МУЗЫКА — победоносная, эпическая ===
+    let audioCtx: AudioContext | null = null;
+    function startMusic() {
+      audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const ctx = audioCtx;
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.gain.value = 0.18;
+      master.connect(ctx.destination);
+
+      const C4=261.63, D4=293.66, E4=329.63, F4=349.23, G4=392, A4=440, B4=493.88;
+      const C5=523.25, D5=587.33, E5=659.25, G5=784;
+
+      // Победоносная мелодия (фанфары + марш)
+      const melody: [number, number][] = [
+        // Фанфары
+        [C5, 0.3], [C5, 0.3], [C5, 0.3], [G4, 0.6],
+        [A4, 0.3], [A4, 0.3], [A4, 0.3], [E4, 0.6],
+        [F4, 0.3], [G4, 0.3], [A4, 0.3], [B4, 0.3], [C5, 0.8], [0, 0.3],
+        // Тема победы
+        [E5, 0.5], [D5, 0.25], [C5, 0.25], [D5, 0.5], [E5, 0.5],
+        [C5, 0.5], [G4, 0.5], [A4, 0.75], [0, 0.25],
+        [D5, 0.5], [C5, 0.25], [B4, 0.25], [C5, 0.5], [D5, 0.5],
+        [B4, 0.5], [G4, 0.5], [A4, 0.75], [0, 0.25],
+        // Героический подъём
+        [C5, 0.4], [D5, 0.4], [E5, 0.4], [G5, 0.8],
+        [E5, 0.4], [D5, 0.4], [C5, 0.4], [E5, 0.8],
+        [G4, 0.3], [A4, 0.3], [B4, 0.3], [C5, 0.3], [D5, 0.3], [E5, 0.3], [G5, 1.2], [0, 0.4],
+        // Триумф
+        [C5, 0.6], [E5, 0.6], [G5, 1.0], [0, 0.3],
+        [E5, 0.3], [C5, 0.3], [G4, 0.3], [C5, 1.0], [0, 0.5],
+      ];
+
+      // Мощные аккорды (духовые)
+      const chords: [number[], number][] = [
+        [[C4, E4, G4], 3], [[F4, A4, C5], 3],
+        [[G4, B4, D5], 3], [[C4, E4, G4], 3],
+        [[A4, C5, E5], 3], [[F4, A4, C5], 3],
+        [[G4, B4, D5], 3], [[C4, E4, C5], 3],
+      ];
+
+      // Мелодия в цикле
+      const melodyDur = melody.reduce((a, [, d]) => a + d, 0);
+      for (let loop = 0; loop < TOTAL_SEC; loop += melodyDur) {
+        let t = loop;
+        for (const [freq, dur] of melody) {
+          if (t > TOTAL_SEC) break;
+          if (freq > 0) {
+            // Труба (sawtooth + фильтр)
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            const filt = ctx.createBiquadFilter();
+            filt.type = 'lowpass';
+            filt.frequency.value = freq * 3;
+            filt.Q.value = 1;
+            const env = ctx.createGain();
+            env.gain.setValueAtTime(0, now + t);
+            env.gain.linearRampToValueAtTime(0.12, now + t + 0.04);
+            env.gain.setValueAtTime(0.1, now + t + dur * 0.7);
+            env.gain.linearRampToValueAtTime(0, now + t + dur);
+            osc.connect(filt);
+            filt.connect(env);
+            env.connect(master);
+            osc.start(now + t);
+            osc.stop(now + t + dur + 0.01);
+
+            // Октава (тихо)
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.value = freq * 2;
+            const env2 = ctx.createGain();
+            env2.gain.setValueAtTime(0, now + t);
+            env2.gain.linearRampToValueAtTime(0.03, now + t + 0.04);
+            env2.gain.linearRampToValueAtTime(0, now + t + dur);
+            osc2.connect(env2);
+            env2.connect(master);
+            osc2.start(now + t);
+            osc2.stop(now + t + dur + 0.01);
+          }
+          t += dur;
+        }
+      }
+
+      // Аккорды (мощные, духовые)
+      const chordDur = chords.reduce((a, [, d]) => a + d, 0);
+      for (let loop = 0; loop < TOTAL_SEC; loop += chordDur) {
+        let t = loop;
+        for (const [freqs, dur] of chords) {
+          if (t > TOTAL_SEC) break;
+          for (const freq of freqs) {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const env = ctx.createGain();
+            env.gain.setValueAtTime(0, now + t);
+            env.gain.linearRampToValueAtTime(0.06, now + t + 0.3);
+            env.gain.setValueAtTime(0.05, now + t + dur * 0.8);
+            env.gain.linearRampToValueAtTime(0, now + t + dur);
+            osc.connect(env);
+            env.connect(master);
+            osc.start(now + t);
+            osc.stop(now + t + dur + 0.01);
+          }
+          t += dur;
+        }
+      }
+
+      // Маршевые барабаны
+      for (let t = 0; t < TOTAL_SEC; t += 0.75) {
+        const isStrong = Math.floor(t / 0.75) % 4 === 0;
+        // Бас-барабан
+        const kick = ctx.createOscillator();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(isStrong ? 100 : 80, now + t);
+        kick.frequency.exponentialRampToValueAtTime(30, now + t + 0.15);
+        const kEnv = ctx.createGain();
+        kEnv.gain.setValueAtTime(isStrong ? 0.15 : 0.08, now + t);
+        kEnv.gain.exponentialRampToValueAtTime(0.001, now + t + 0.2);
+        kick.connect(kEnv);
+        kEnv.connect(master);
+        kick.start(now + t);
+        kick.stop(now + t + 0.2);
+
+        // Малый барабан (каждый 2-й удар)
+        if (Math.floor(t / 0.75) % 2 === 1) {
+          const snBuf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+          const snData = snBuf.getChannelData(0);
+          for (let i = 0; i < snData.length; i++) {
+            snData[i] = (Math.random() * 2 - 1) * Math.exp(-i / ctx.sampleRate * 30);
+          }
+          const sn = ctx.createBufferSource();
+          sn.buffer = snBuf;
+          const snEnv = ctx.createGain();
+          snEnv.gain.setValueAtTime(0.08, now + t);
+          snEnv.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
+          const snFilt = ctx.createBiquadFilter();
+          snFilt.type = 'highpass';
+          snFilt.frequency.value = 2000;
+          sn.connect(snFilt);
+          snFilt.connect(snEnv);
+          snEnv.connect(master);
+          sn.start(now + t);
+        }
+      }
+
+      // Тарелки (каждые 3 секунды)
+      for (let t = 0; t < TOTAL_SEC; t += 3) {
+        const cymBuf = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+        const cymData = cymBuf.getChannelData(0);
+        for (let i = 0; i < cymData.length; i++) {
+          cymData[i] = (Math.random() * 2 - 1) * Math.exp(-i / ctx.sampleRate * 5);
+        }
+        const cym = ctx.createBufferSource();
+        cym.buffer = cymBuf;
+        const cymEnv = ctx.createGain();
+        cymEnv.gain.setValueAtTime(0.04, now + t);
+        cymEnv.gain.exponentialRampToValueAtTime(0.001, now + t + 0.4);
+        const cymFilt = ctx.createBiquadFilter();
+        cymFilt.type = 'highpass';
+        cymFilt.frequency.value = 6000;
+        cym.connect(cymFilt);
+        cymFilt.connect(cymEnv);
+        cymEnv.connect(master);
+        cym.start(now + t);
+      }
+
+      // Суб-бас пэд
+      const sub = ctx.createOscillator();
+      sub.type = 'sine';
+      sub.frequency.value = C4 / 4;
+      const subGain = ctx.createGain();
+      subGain.gain.value = 0.05;
+      sub.connect(subGain);
+      subGain.connect(master);
+      sub.start(now);
+      sub.stop(now + TOTAL_SEC);
+    }
 
     const startTime = performance.now();
+
+    // Запускаем музыку
+    try { startMusic(); } catch (_e) { /* ok */ }
 
     function frame() {
       const now = performance.now();
@@ -203,6 +440,7 @@ export function playCredits(): Promise<void> {
       const t = elapsed / 1000;
 
       if (skipped || elapsed > TOTAL) {
+        if (audioCtx) { audioCtx.close().catch(() => {}); }
         overlay.style.transition = 'opacity 1s';
         overlay.style.opacity = '0';
         setTimeout(() => {
@@ -229,9 +467,13 @@ export function playCredits(): Promise<void> {
       const scrollY = H - t * scrollSpeed;
       creditsContainer.style.top = scrollY + 'px';
 
-      // Плавное появление и исчезновение
-      if (t < 1) {
-        overlay.style.opacity = String(t);
+      // Плавное появление
+      if (t < 1) overlay.style.opacity = String(t);
+
+      // Плавное затемнение в конце
+      if (t > TOTAL_SEC - 3) {
+        const fade = 1 - (t - (TOTAL_SEC - 3)) / 3;
+        overlay.style.opacity = String(Math.max(0, fade));
       }
 
       requestAnimationFrame(frame);
