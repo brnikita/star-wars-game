@@ -35,31 +35,31 @@ export class Stormtrooper extends Entity implements Enemy {
   }
 
   private buildModel(): void {
-    // Боевой дроид — бежевый металл
+    // Боевой дроид — военный камуфляж (тёмно-зелёный/хаки)
     const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0xc4a870,
-      roughness: 0.35,
-      metalness: 0.6,
+      color: 0x3a4a2a,
+      roughness: 0.45,
+      metalness: 0.55,
     });
 
     const bodyDark = new THREE.MeshStandardMaterial({
-      color: 0xb09060,
-      roughness: 0.3,
-      metalness: 0.65,
+      color: 0x2e3e22,
+      roughness: 0.4,
+      metalness: 0.6,
     });
 
     const jointMat = new THREE.MeshStandardMaterial({
-      color: 0x8a7550,
-      roughness: 0.3,
-      metalness: 0.7,
+      color: 0x1e2a18,
+      roughness: 0.35,
+      metalness: 0.65,
     });
 
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff4422 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2200 });
 
     const backpackMat = new THREE.MeshStandardMaterial({
-      color: 0xa08858,
-      roughness: 0.4,
-      metalness: 0.5,
+      color: 0x445530,
+      roughness: 0.5,
+      metalness: 0.45,
     });
 
     // === Голова (характерная для B1 — вытянутая, с антенной) ===
@@ -182,9 +182,9 @@ export class Stormtrooper extends Entity implements Enemy {
 
     // === Бластер E-5 в правой руке ===
     const blasterMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2a, roughness: 0.3, metalness: 0.8,
+      color: 0x1a1a1a, roughness: 0.25, metalness: 0.85,
     });
-    const blasterGlow = new THREE.MeshBasicMaterial({ color: 0xff4422 });
+    const blasterGlow = new THREE.MeshBasicMaterial({ color: 0xff2200 });
 
     const blaster = new THREE.Group();
     // Ствол
@@ -349,19 +349,37 @@ export class Stormtrooper extends Entity implements Enemy {
     this.syncMeshToBody();
   }
 
-  update(dt: number, player?: K2SO): void {
+  private pedFireTimer = 0;
+
+  update(dt: number, player?: K2SO, pedestrians?: THREE.Group[]): void {
     if (this.isDead || !player) return;
 
     this.wantsToShoot = false;
     this.fireTimer -= dt;
+    this.pedFireTimer -= dt;
 
     const playerPos = player.getPosition();
     const myPos = this.getPosition();
     const dist = distanceXZ(myPos, playerPos);
 
+    const detectMult = player.getDetectMultiplier();
+    const detectRange = STORMTROOPER_DETECT_RANGE * detectMult;
+    const attackRange = STORMTROOPER_ATTACK_RANGE * detectMult;
+
+    // Проверка линии видимости
+    const eyePos = myPos.clone();
+    eyePos.y += 0.3;
+    const targetPos = playerPos.clone();
+    targetPos.y += 0.5;
+    const canSee = this.physics.hasLineOfSight(eyePos, targetPos, [this.body, player.body]);
+
     switch (this.state) {
       case 'idle':
-        if (dist < STORMTROOPER_DETECT_RANGE) {
+        // Стреляем по ближайшему прохожему
+        if (pedestrians && this.pedFireTimer <= 0) {
+          this.tryShootPedestrian(myPos, pedestrians);
+        }
+        if (dist < detectRange && canSee) {
           this.state = 'alert';
           this.alertTimer = 1.0;
         }
@@ -370,6 +388,10 @@ export class Stormtrooper extends Entity implements Enemy {
       case 'alert':
         this.alertTimer -= dt;
         this.lookAt(playerPos);
+        if (!canSee || (player.isStealth && dist > detectRange)) {
+          this.state = 'idle';
+          break;
+        }
         if (this.alertTimer <= 0) {
           this.state = 'combat';
         }
@@ -378,20 +400,30 @@ export class Stormtrooper extends Entity implements Enemy {
       case 'combat':
         this.lookAt(playerPos);
 
+        // Потерять цель если нет видимости или стелс
+        if (!canSee) {
+          this.state = 'search';
+          this.alertTimer = 4;
+          break;
+        }
+        if (player.isStealth && dist > detectRange * 0.8) {
+          this.state = 'search';
+          this.alertTimer = 3;
+          break;
+        }
+
         if (dist > STORMTROOPER_DETECT_RANGE * 1.5) {
           this.state = 'search';
           this.alertTimer = 5;
-        } else if (dist <= STORMTROOPER_ATTACK_RANGE) {
-          // Стрелять, если в зоне атаки
+        } else if (dist <= attackRange) {
+          // Стрелять только если есть прямая видимость
           if (this.fireTimer <= 0) {
             this.fireTimer = STORMTROOPER_FIRE_RATE;
             this.wantsToShoot = true;
 
-            // Точка выстрела — позиция дроида на уровне груди
             this.shootOrigin.copy(myPos);
             this.shootOrigin.y += 0.3;
 
-            // Направление к игроку с неточностью
             const spread = (1 - STORMTROOPER_ACCURACY) * 0.5;
             this.shootDirection
               .subVectors(playerPos, this.shootOrigin)
@@ -402,7 +434,6 @@ export class Stormtrooper extends Entity implements Enemy {
             this.shootDirection.normalize();
           }
 
-          // Подойти ближе, если далеко
           if (dist > STORMTROOPER_ATTACK_RANGE * 0.5) {
             this.moveToward(playerPos, dt);
           }
@@ -413,7 +444,11 @@ export class Stormtrooper extends Entity implements Enemy {
 
       case 'search':
         this.alertTimer -= dt;
-        if (dist < STORMTROOPER_DETECT_RANGE) {
+        // Стреляем по прохожим пока ищем игрока
+        if (pedestrians && this.pedFireTimer <= 0) {
+          this.tryShootPedestrian(myPos, pedestrians);
+        }
+        if (dist < detectRange && !player.isStealth && canSee) {
           this.state = 'combat';
         } else if (this.alertTimer <= 0) {
           this.state = 'idle';
@@ -422,6 +457,36 @@ export class Stormtrooper extends Entity implements Enemy {
     }
 
     this.syncMeshToBody();
+  }
+
+  /** Найти ближайшего прохожего и стрельнуть по нему */
+  private tryShootPedestrian(myPos: THREE.Vector3, pedestrians: THREE.Group[]): void {
+    let closest: THREE.Group | null = null;
+    let closestDist = 25; // макс. дальность стрельбы по прохожим
+    for (const ped of pedestrians) {
+      if (!ped.visible) continue;
+      const d = distanceXZ(myPos, ped.position);
+      if (d < closestDist) {
+        closestDist = d;
+        closest = ped;
+      }
+    }
+    if (!closest) return;
+
+    this.pedFireTimer = 1.5 + Math.random() * 2.0; // стреляет каждые 1.5-3.5 сек
+    this.wantsToShoot = true;
+    this.lookAt(closest.position);
+
+    this.shootOrigin.copy(myPos);
+    this.shootOrigin.y += 0.3;
+
+    const spread = 0.3;
+    const pedTarget = closest.position.clone();
+    pedTarget.y += 0.8;
+    this.shootDirection.subVectors(pedTarget, this.shootOrigin).normalize();
+    this.shootDirection.x += (Math.random() - 0.5) * spread;
+    this.shootDirection.z += (Math.random() - 0.5) * spread;
+    this.shootDirection.normalize();
   }
 
   private lookAt(target: THREE.Vector3): void {
@@ -442,6 +507,7 @@ export class Stormtrooper extends Entity implements Enemy {
   }
 
   protected onDeath(): void {
+    // Ragdoll — падение
     this.body.type = CANNON.Body.DYNAMIC;
     this.body.fixedRotation = false;
     this.body.angularDamping = 0.3;
@@ -452,5 +518,68 @@ export class Stormtrooper extends Entity implements Enemy {
         (Math.random() - 0.5) * 5
       )
     );
+
+    // Кровь — частицы (масляная жидкость дроида)
+    const pos = this.getPosition();
+    const bloodMat = new THREE.MeshBasicMaterial({ color: 0x44cc44, transparent: true, opacity: 0.8 });
+
+    // Брызги крови (зелёная — как у дроидов)
+    for (let i = 0; i < 12; i++) {
+      const size = 0.03 + Math.random() * 0.06;
+      const drop = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 4, 4), bloodMat
+      );
+      drop.position.set(
+        pos.x + (Math.random() - 0.5) * 0.5,
+        pos.y + 0.3 + Math.random() * 0.5,
+        pos.z + (Math.random() - 0.5) * 0.5
+      );
+      this.scene.add(drop);
+
+      // Анимация падения капель
+      const vx = (Math.random() - 0.5) * 3;
+      const vy = Math.random() * 3 + 1;
+      const vz = (Math.random() - 0.5) * 3;
+      const startTime = performance.now();
+      const animate = () => {
+        const elapsed = (performance.now() - startTime) / 1000;
+        if (elapsed > 2) {
+          this.scene.remove(drop);
+          return;
+        }
+        drop.position.x += vx * 0.016;
+        drop.position.y += (vy - elapsed * 9.8) * 0.016;
+        drop.position.z += vz * 0.016;
+        (drop.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.8 - elapsed * 0.4);
+        requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }
+
+    // Лужа крови на земле (появляется с задержкой)
+    setTimeout(() => {
+      const poolMat = new THREE.MeshStandardMaterial({
+        color: 0x33aa33, roughness: 0.2, metalness: 0.3,
+        transparent: true, opacity: 0.7,
+      });
+      const pool = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.01, 0.01, 0.01, 8), poolMat
+      );
+      pool.position.set(pos.x, 0.01, pos.z);
+      pool.scale.set(1, 1, 1);
+      this.scene.add(pool);
+
+      // Лужа растёт
+      const poolStart = performance.now();
+      const growPool = () => {
+        const t = (performance.now() - poolStart) / 1000;
+        if (t > 3) return;
+        const s = Math.min(t * 0.4, 1.0) * (0.5 + Math.random() * 0.01);
+        pool.scale.set(s * 80, 1, s * 80);
+        pool.material.opacity = Math.min(0.7, t * 0.35);
+        requestAnimationFrame(growPool);
+      };
+      requestAnimationFrame(growPool);
+    }, 300);
   }
 }

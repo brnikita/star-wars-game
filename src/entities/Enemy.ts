@@ -20,7 +20,7 @@ export interface Enemy {
   getPosition(): THREE.Vector3;
   takeDamage(amount: number): void;
   fixedUpdate(dt: number, player: K2SO): void;
-  update(dt: number, player?: K2SO): void;
+  update(dt: number, player?: K2SO, pedestrians?: THREE.Group[]): void;
   spawn(position: THREE.Vector3): void;
   dispose(scene: THREE.Scene, physics: PhysicsSystem): void;
 }
