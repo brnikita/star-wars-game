@@ -1,0 +1,25 @@
+{
+  "name": "Убойный Робот — НейроСити 2148",
+  "short_name": "Убойный Робот",
+  "description": "К-2SO — Убойный Робот. 3D шутер от третьего лица в футуристическом городе.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["games"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

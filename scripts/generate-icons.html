@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate PWA Icons</title></head>
+<body>
+<h2>Нажми на иконку правой кнопкой → Сохранить как</h2>
+<canvas id="c192" width="192" height="192" style="border:1px solid #333;margin:10px;"></canvas>
+<canvas id="c512" width="512" height="512" style="border:1px solid #333;margin:10px;"></canvas>
+<script>
+function drawIcon(canvas) {
+  const s = canvas.width;
+  const ctx = canvas.getContext('2d');
+  const f = s / 64; // scale factor
+
+  // Фон
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, s);
+  skyGrad.addColorStop(0, '#0a0515');
+  skyGrad.addColorStop(0.4, '#1a0808');
+  skyGrad.addColorStop(0.7, '#2a1005');
+  skyGrad.addColorStop(1, '#0a0505');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, s, s);
+
+  // Скруглённые углы (mask)
+  ctx.save();
+  const r = s * 0.15;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(s - r, 0);
+  ctx.quadraticCurveTo(s, 0, s, r);
+  ctx.lineTo(s, s - r);
+  ctx.quadraticCurveTo(s, s, s - r, s);
+  ctx.lineTo(r, s);
+  ctx.quadraticCurveTo(0, s, 0, s - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.clip();
+
+  // Перерисовать фон в маске
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, s, s);
+
+  // Здания
+  ctx.fillStyle = '#0e0a14';
+  const buildings = [[2,30,8,28],[11,22,6,36],[18,34,10,24],[29,18,5,40],[35,32,8,26],[44,26,6,32],[51,30,7,28],[59,34,5,24]];
+  for (const [x,y,w,h] of buildings) ctx.fillRect(x*f, y*f, w*f, h*f);
+
+  // Неон
+  ctx.fillStyle = '#00ccff';
+  ctx.globalAlpha = 0.6;
+  [[2,30,1,28],[10,30,1,28],[29,18,1,40],[34,18,1,40],[44,26,1,32]].forEach(([x,y,w,h]) => ctx.fillRect(x*f,y*f,w*f,h*f));
+  ctx.globalAlpha = 1;
+
+  // Окна
+  ctx.fillStyle = '#ffaa33';
+  [[4,33],[4,37],[7,35],[13,26],[13,30],[14,34],[20,37],[23,40],[31,22],[31,28],[31,34],[37,36],[40,40],[46,30],[47,34],[53,34],[55,38]].forEach(([x,y]) => ctx.fillRect(x*f,y*f,2*f,2*f));
+
+  // Огонь
+  ctx.fillStyle = '#ff4400';
+  ctx.globalAlpha = 0.8;
+  [[8,52,4,3],[22,50,5,4],[42,51,3,3],[56,53,4,3]].forEach(([x,y,w,h]) => ctx.fillRect(x*f,y*f,w*f,h*f));
+  ctx.fillStyle = '#ffcc00';
+  [[9,53,2,2],[23,51,3,2],[43,52,1,1]].forEach(([x,y,w,h]) => ctx.fillRect(x*f,y*f,w*f,h*f));
+  ctx.globalAlpha = 1;
+
+  // Зелёные выстрелы
+  ctx.fillStyle = '#00ff44';
+  [[5,56,4,1],[15,55,3,1],[38,57,4,1],[50,55,3,1]].forEach(([x,y,w,h]) => ctx.fillRect(x*f,y*f,w*f,h*f));
+
+  // Земля
+  ctx.fillStyle = '#0a0805';
+  ctx.fillRect(0, 58*f, s, 6*f);
+
+  // К-2SO
+  const kx = 30*f, ky = 12*f;
+  ctx.fillStyle = '#2288ff';
+  ctx.globalAlpha = 0.15;
+  ctx.beginPath(); ctx.arc(kx, ky, 6*f, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(kx-2*f, ky+5*f, 2*f, 5*f);
+  ctx.fillRect(kx-3*f, ky+9*f, 2*f, 2*f);
+  ctx.fillRect(kx+1*f, ky+4*f, 2*f, 4*f);
+  ctx.fillRect(kx+2*f, ky+7*f, 2*f, 2*f);
+  ctx.fillRect(kx-2*f, ky-1*f, 5*f, 7*f);
+  ctx.fillStyle = '#4a4a55';
+  ctx.fillRect(kx-1*f, ky, 3*f, 3*f);
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(kx-4*f, ky-3*f, 2*f, 5*f);
+  ctx.fillRect(kx+3*f, ky-1*f, 2*f, 4*f);
+  ctx.fillStyle = '#555555';
+  ctx.fillRect(kx+5*f, ky, 3*f, 1*f);
+  ctx.fillStyle = '#2288ff';
+  ctx.fillRect(kx+8*f, ky, 5*f, 1*f);
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(kx+13*f, ky, 3*f, 1*f);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#3a3a44';
+  ctx.fillRect(kx-1*f, ky-5*f, 4*f, 4*f);
+  ctx.fillStyle = '#4a4a55';
+  ctx.fillRect(kx, ky-4*f, 2*f, 2*f);
+  ctx.fillStyle = '#2288ff';
+  ctx.fillRect(kx, ky-4*f, 1*f, 1*f);
+  ctx.fillRect(kx+2*f, ky-4*f, 1*f, 1*f);
+
+  ctx.restore();
+}
+drawIcon(document.getElementById('c192'));
+drawIcon(document.getElementById('c512'));
+
+// Auto-download
+['c192','c512'].forEach(id => {
+  const c = document.getElementById(id);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = 'icon-' + c.width + '.png';
+  a.textContent = 'Скачать ' + c.width + 'x' + c.width;
+  a.style.cssText = 'display:block;margin:10px;color:#2288ff;font-size:18px;';
+  document.body.appendChild(a);
+});
+</script>
+</body>
+</html>
