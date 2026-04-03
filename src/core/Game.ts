@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { InputManager } from './InputManager';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { CameraSystem } from '../systems/CameraSystem';
@@ -7,13 +12,13 @@ import { K2SO } from '../entities/K2SO';
 import { Enemy } from '../entities/Enemy';
 import { Stormtrooper } from '../entities/Stormtrooper';
 import { TurretDroid } from '../entities/TurretDroid';
+import { BossDroid } from '../entities/BossDroid';
+import { MantisBot } from '../entities/MantisBot';
 import { HUD } from '../ui/HUD';
 import { createTestLevel, GrievousRef } from '../levels/TestLevel';
 import {
-  LevelData,
-  createIcePlanet, createJediTemple, createDroidFactory,
-  createMountainRestaurant, createJediCemetery, createAbandonedCity,
-  createSaturnMine, createDesertPlanet,
+  LevelData, Pedestrian, MovingCar, TrafficLight,
+  createCityBrawl, createMetroBoss,
 } from '../levels/LevelFactory';
 import { FIXED_TIME_STEP, MAX_SUB_STEPS } from '../utils/Constants';
 
@@ -21,16 +26,16 @@ const TOTAL_LEVELS = 10;
 
 // Названия уровней для HUD
 const LEVEL_NAMES = [
-  'Космический корабль',
-  'Ледяная планета',
-  'Храм джедаев',
-  'Завод дроидов',
-  'Горный ресторан',
-  'Кладбище джедаев',
-  'Заброшенный город',
-  'Шахта на Сатурне',
-  'Пустынная планета',
-  'Комната Гривуса',
+  'НейроСити — 2148 / Район 1',
+  'НейроСити — 2148 / Район 2',
+  'НейроСити — 2148 / Район 3',
+  'НейроСити — 2148 / Район 4',
+  'НейроСити — 2148 / Район 5',
+  'НейроСити — 2148 / Район 6',
+  'НейроСити — 2148 / Район 7',
+  'НейроСити — 2148 / Район 8',
+  'НейроСити — 2148 / Район 9',
+  'Метро — Босс R-111',
 ];
 
 export class Game {
@@ -45,6 +50,16 @@ export class Game {
   player!: K2SO;
   enemies: Enemy[] = [];
   clock: THREE.Clock;
+  private composer!: EffectComposer;
+  private colorPass: ShaderPass | null = null;
+  private pedestrians: Pedestrian[] = [];
+  private movingCars: MovingCar[] = [];
+  private trafficLights: TrafficLight[] = [];
+  private pedTime = 0;
+  private _pedMeshCache: THREE.Group[] = [];
+  private _pedMeshCacheLen = 0;
+  private audioListener: THREE.AudioListener | null = null;
+  private pedScreamTimer = 0;
 
   private accumulator = 0;
   private running = false;
@@ -81,20 +96,122 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 2.0;
+    this.renderer.toneMappingExposure = 1.4;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    // Сцена
+    // Сцена — кинематографический голубой фон
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x334455);
-    this.scene.fog = new THREE.Fog(0x334455, 60, 180);
+    this.scene.background = new THREE.Color(0x0a0a1a);
+    this.scene.fog = new THREE.FogExp2(0x0a0a1a, 0.005);
 
-    // Камера
+    // Environment map — HDR-подобное окружение для отражений
+    const pmremGen = new THREE.PMREMGenerator(this.renderer);
+    const envScene = new THREE.Scene();
+    const skyGeo = new THREE.SphereGeometry(50, 24, 12);
+    const skyMat = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      uniforms: {
+        topColor: { value: new THREE.Color(0x2266aa) },
+        midColor: { value: new THREE.Color(0xaaccee) },
+        botColor: { value: new THREE.Color(0xe8d0b0) },
+        sunDir:   { value: new THREE.Vector3(0.5, 0.3, -0.4).normalize() },
+      },
+      vertexShader: `
+        varying vec3 vWorldDir;
+        void main(){
+          vWorldDir = normalize((modelMatrix * vec4(position,1.0)).xyz);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 topColor, midColor, botColor, sunDir;
+        varying vec3 vWorldDir;
+        void main(){
+          float y = vWorldDir.y;
+          vec3 col = y > 0.0 ? mix(midColor, topColor, pow(y, 0.5)) : mix(midColor, botColor, pow(-y, 0.4));
+          // Солнечный ореол
+          float sun = max(dot(normalize(vWorldDir), sunDir), 0.0);
+          col += vec3(1.0, 0.85, 0.6) * pow(sun, 32.0) * 2.0;
+          col += vec3(1.0, 0.9, 0.7) * pow(sun, 4.0) * 0.3;
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    });
+    envScene.add(new THREE.Mesh(skyGeo, skyMat));
+    envScene.add(new THREE.HemisphereLight(0x88aacc, 0x886644, 2.0));
+    const envSun = new THREE.DirectionalLight(0xffeedd, 2.0);
+    envSun.position.set(5, 3, -4);
+    envScene.add(envSun);
+    // Светящиеся панели (отражения окон зданий)
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const g = new THREE.Mesh(
+        new THREE.PlaneGeometry(3, 6),
+        new THREE.MeshBasicMaterial({ color: 0xeeeeff })
+      );
+      g.position.set(Math.cos(a) * 30, 4, Math.sin(a) * 30);
+      g.lookAt(0, 4, 0);
+      envScene.add(g);
+    }
+    this.scene.environment = pmremGen.fromScene(envScene, 0.02).texture;
+    pmremGen.dispose();
+
+    // Камера — кинематографический FOV
     this.camera = new THREE.PerspectiveCamera(
-      65,
+      55,
       window.innerWidth / window.innerHeight,
       0.1,
       400
     );
+
+    // === Кинематографический пост-процессинг ===
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+
+    // Bloom — мягкое свечение (как в кино — ореолы вокруг ярких объектов)
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.4,   // strength
+      0.8,   // radius (широкий, мягкий)
+      0.75   // threshold
+    );
+    this.composer.addPass(bloom);
+
+    // Кинематографическая цветокоррекция
+    this.colorPass = new ShaderPass({
+      uniforms: {
+        tDiffuse: { value: null },
+        time: { value: 0 },
+      },
+      vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float time;
+        varying vec2 vUv;
+
+        void main(){
+          vec2 center = vUv - 0.5;
+          float dist = length(center);
+          vec3 col = texture2D(tDiffuse, vUv).rgb;
+
+          // Контраст (мягкая S-кривая)
+          col = (col - 0.5) * 1.1 + 0.5;
+          col = clamp(col, 0.0, 1.0);
+
+          // Глубокая виньетка (как в кино)
+          float vig = 1.0 - dist * 1.2;
+          vig = clamp(vig, 0.0, 1.0);
+          vig = vig * vig;
+          col *= mix(0.3, 1.0, vig);
+
+          // Зерно плёнки (тонкое)
+          float grain = fract(sin(dot(vUv * 500.0 + time, vec2(12.9898, 78.233))) * 43758.5453);
+          col += (grain - 0.5) * 0.03;
+
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+    });
+    this.composer.addPass(this.colorPass);
+
+    this.composer.addPass(new OutputPass());
 
     // Подсистемы
     this.input = new InputManager(canvas);
@@ -135,123 +252,58 @@ export class Game {
   }
 
   async init(): Promise<void> {
-    await this.updateLoadingBar(20);
+    // Показываем прогресс
+    const bar = document.getElementById('loading-bar');
+    if (bar) bar.style.width = '30%';
 
-    // Создать корабль (уровень 1) — он же содержит комнату Гривуса для уровня 10
-    this.grievousRef = createTestLevel(this.scene, this.physics);
-    // Базовое освещение для корабля
-    this.setupBaseLighting();
-    await this.updateLoadingBar(50);
-
-    // Создать игрока (K-2SO)
     this.player = new K2SO(this.scene, this.physics);
-    this.player.spawn(new THREE.Vector3(-20, 1.5, -75));
-    await this.updateLoadingBar(70);
-
-    // Создать врагов первого уровня
-    this.loadLevel(0);
-    this.hud.setLevel(1);
-    this.hud.setLevelName(LEVEL_NAMES[0]);
-    await this.updateLoadingBar(90);
-
-    // Инициализировать камеру
+    this.player.spawn(new THREE.Vector3(0, 1.5, 0));
     this.cameraSystem.setTarget(this.player);
     this.cameraSystem.setScene(this.scene);
 
-    // Прекомпиляция шейдеров — убирает задержку на первом кадре
-    this.renderer.compile(this.scene, this.camera);
-    await this.updateLoadingBar(100);
+    // Аудио-система
+    this.audioListener = new THREE.AudioListener();
+    this.camera.add(this.audioListener);
 
-    // Показать "Нажмите для начала"
+    if (bar) bar.style.width = '60%';
+
+    this.currentLevel = 0;
+    this.levelComplete = true;
+    this.loadLevel(0);
+    this.levelComplete = false;
+    this.hud.setLevel(1);
+    this.hud.setLevelName(LEVEL_NAMES[0]);
+
+    if (bar) bar.style.width = '100%';
+
+    // Ждём клик/Enter для старта (нужен для pointer lock)
+    const clickText = document.getElementById('click-to-start');
+    if (clickText) clickText.style.display = 'block';
     await this.showClickToStart();
+  }
+
+  private updateLoadingBarSync(percent: number): void {
+    const bar = document.getElementById('loading-bar');
+    if (bar) bar.style.width = `${percent}%`;
   }
 
   /** Загрузить уровень: создать окружение + заспавнить врагов */
   private loadLevel(levelIndex: number): void {
-    // Уровень 0 (корабль) — враги в стартовых позициях
-    if (levelIndex === 0) {
-      const enemies = [
-        new THREE.Vector3(2, 2, -15), new THREE.Vector3(-3, 2, -40),
-        new THREE.Vector3(3, 2, -65), new THREE.Vector3(-2, 2, -100),
-        new THREE.Vector3(2, 2, -140),
-      ];
-      this.spawnEnemies(enemies);
-      this.spawnTurrets([
-        new THREE.Vector3(0, 1, -55),
-        new THREE.Vector3(-2, 1, -120),
-      ]);
-      // Укрытия в коридоре корабля
-      this.spawnCover([
-        { pos: new THREE.Vector3(3, 0.6, -10), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(-3, 0.6, -28), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(2, 0.6, -48), size: new THREE.Vector3(2, 1.2, 1) },
-        { pos: new THREE.Vector3(-2, 0.6, -60), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(3, 0.6, -80), size: new THREE.Vector3(1.5, 1.2, 1) },
-        { pos: new THREE.Vector3(-3, 0.6, -90), size: new THREE.Vector3(2, 1.2, 1.5) },
-        { pos: new THREE.Vector3(0, 0.6, -110), size: new THREE.Vector3(3, 1.2, 1) },
-        { pos: new THREE.Vector3(-2, 0.6, -130), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(2, 0.6, -150), size: new THREE.Vector3(1.5, 1.2, 1) },
-      ]);
-      return;
-    }
-
-    // Уровень 9 (финал — комната Гривуса) — враги на корабле
-    if (levelIndex === 9) {
-      const enemies = [
-        new THREE.Vector3(8, 2, -185), new THREE.Vector3(-8, 2, -185),
-        new THREE.Vector3(5, 2, -195), new THREE.Vector3(-5, 2, -195),
-        new THREE.Vector3(10, 2, -200), new THREE.Vector3(-10, 2, -200),
-        new THREE.Vector3(3, 2, -205), new THREE.Vector3(-3, 2, -205),
-        new THREE.Vector3(12, 2, -180), new THREE.Vector3(-12, 2, -180),
-        new THREE.Vector3(8, 2, -188), new THREE.Vector3(-8, 2, -188),
-        new THREE.Vector3(3, 2, -8), new THREE.Vector3(-3, 2, -50),
-        new THREE.Vector3(2, 2, -100), new THREE.Vector3(-2, 2, -140),
-      ];
-      this.spawnEnemies(enemies);
-      this.spawnTurrets([
-        new THREE.Vector3(0, 1, -175),
-        new THREE.Vector3(-6, 1, -190),
-        new THREE.Vector3(6, 1, -198),
-        new THREE.Vector3(0, 1, -208),
-        new THREE.Vector3(-10, 1, -183),
-        new THREE.Vector3(10, 1, -203),
-      ]);
-      // Укрытия на финальном уровне (коридор + комната Гривуса)
-      this.spawnCover([
-        { pos: new THREE.Vector3(3, 0.6, -12), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(-3, 0.6, -35), size: new THREE.Vector3(1.5, 1.2, 1) },
-        { pos: new THREE.Vector3(2, 0.6, -60), size: new THREE.Vector3(2, 1.2, 1) },
-        { pos: new THREE.Vector3(-2, 0.6, -90), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(0, 0.6, -120), size: new THREE.Vector3(3, 1.2, 1) },
-        { pos: new THREE.Vector3(-3, 0.6, -145), size: new THREE.Vector3(1.5, 1.2, 1.5) },
-        { pos: new THREE.Vector3(3, 0.6, -160), size: new THREE.Vector3(2, 1.2, 1) },
-        // Комната Гривуса — укрытия побольше
-        { pos: new THREE.Vector3(8, 0.8, -178), size: new THREE.Vector3(2.5, 1.6, 2) },
-        { pos: new THREE.Vector3(-8, 0.8, -178), size: new THREE.Vector3(2.5, 1.6, 2) },
-        { pos: new THREE.Vector3(5, 0.8, -192), size: new THREE.Vector3(2, 1.6, 2.5) },
-        { pos: new THREE.Vector3(-5, 0.8, -192), size: new THREE.Vector3(2, 1.6, 2.5) },
-        { pos: new THREE.Vector3(0, 0.8, -200), size: new THREE.Vector3(3, 1.6, 1.5) },
-        { pos: new THREE.Vector3(10, 0.8, -205), size: new THREE.Vector3(2, 1.6, 2) },
-        { pos: new THREE.Vector3(-10, 0.8, -205), size: new THREE.Vector3(2, 1.6, 2) },
-      ]);
-      return;
-    }
-
-    // Уровни 1-8 — другие локации
+    // Уровни 0-8 — НейроСити (разные районы)
+    // Уровень 9 — босс R-111 (метро)
     let data: LevelData;
-    switch (levelIndex) {
-      case 1: data = createIcePlanet(this.scene, this.physics); break;
-      case 2: data = createJediTemple(this.scene, this.physics); break;
-      case 3: data = createDroidFactory(this.scene, this.physics); break;
-      case 4: data = createMountainRestaurant(this.scene, this.physics); break;
-      case 5: data = createJediCemetery(this.scene, this.physics); break;
-      case 6: data = createAbandonedCity(this.scene, this.physics); break;
-      case 7: data = createSaturnMine(this.scene, this.physics); break;
-      case 8: data = createDesertPlanet(this.scene, this.physics); break;
-      default: return;
+    if (levelIndex <= 8) {
+      data = createCityBrawl(this.scene, this.physics, levelIndex + 1);
+    } else if (levelIndex === 9) {
+      data = createMetroBoss(this.scene, this.physics);
+    } else {
+      return;
     }
 
     this.currentLevelData = data;
+    this.pedestrians = data.pedestrians || [];
+    this.movingCars = data.movingCars || [];
+    this.trafficLights = data.trafficLights || [];
 
     // Обновить фон и туман
     (this.scene.background as THREE.Color).set(data.bgColor);
@@ -271,6 +323,20 @@ export class Game {
     // Заспавнить турели (если есть)
     if (data.turrets) {
       this.spawnTurrets(data.turrets);
+    }
+
+    // Босс в метро (индекс 9)
+    if (levelIndex === 9) {
+      this.spawnBosses([
+        new THREE.Vector3(0, 2, 0),
+      ]);
+    }
+
+    // Мини-босс богомол на каждом уровне города (0-8)
+    if (levelIndex <= 8) {
+      this.spawnMantis([
+        new THREE.Vector3(15 + levelIndex * 3, 2, 15 + levelIndex * 2),
+      ]);
     }
 
     // Сбросить позицию игрока
@@ -329,7 +395,7 @@ export class Game {
     for (const l of this.baseLights) l.visible = true;
 
     // Восстановить фон и туман корабля
-    (this.scene.background as THREE.Color).set(0x334455);
+    (this.scene.background as THREE.Color).set(0x0a0a1a);
     (this.scene.fog as THREE.Fog).color.set(0x334455);
     (this.scene.fog as THREE.Fog).near = 60;
     (this.scene.fog as THREE.Fog).far = 180;
@@ -348,6 +414,22 @@ export class Game {
       const turret = new TurretDroid(this.scene, this.physics);
       turret.spawn(pos.clone());
       this.enemies.push(turret);
+    }
+  }
+
+  private spawnBosses(positions: THREE.Vector3[]): void {
+    for (const pos of positions) {
+      const boss = new BossDroid(this.scene, this.physics);
+      boss.spawn(pos.clone());
+      this.enemies.push(boss);
+    }
+  }
+
+  private spawnMantis(positions: THREE.Vector3[]): void {
+    for (const pos of positions) {
+      const mantis = new MantisBot(this.scene, this.physics);
+      mantis.spawn(pos.clone());
+      this.enemies.push(mantis);
     }
   }
 
@@ -378,10 +460,9 @@ export class Game {
     this.coverBodies = [];
   }
 
+  // kept for other levels that still call it
   private async updateLoadingBar(percent: number): Promise<void> {
-    const bar = document.getElementById('loading-bar');
-    if (bar) bar.style.width = `${percent}%`;
-    await new Promise(r => setTimeout(r, 0));
+    this.updateLoadingBarSync(percent);
   }
 
   private showClickToStart(): Promise<void> {
@@ -389,7 +470,7 @@ export class Game {
       const btn = document.getElementById('click-to-start');
       if (btn) btn.style.display = 'block';
 
-      const handler = () => {
+      const handler = async () => {
         const screen = document.getElementById('loading-screen');
         if (screen) {
           screen.style.opacity = '0';
@@ -397,10 +478,22 @@ export class Game {
         }
         window.removeEventListener('click', handler);
         window.removeEventListener('touchend', handler);
+        window.removeEventListener('keydown', keyHandler);
+
+        // Заставка после нажатия Enter
+        const { playIntro } = await import('../intro');
+        await playIntro();
+
         resolve();
+      };
+      const keyHandler = (e: KeyboardEvent) => {
+        if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+          handler();
+        }
       };
       window.addEventListener('click', handler);
       window.addEventListener('touchend', handler);
+      window.addEventListener('keydown', keyHandler);
     });
   }
 
@@ -428,8 +521,13 @@ export class Game {
     // Обновление графики (каждый кадр)
     this.update(delta);
 
+    // Обновить время для зерна плёнки
+    if (this.colorPass) {
+      this.colorPass.uniforms['time'].value = performance.now() * 0.001;
+    }
+
     // Рендер
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
 
     // Сброс ввода
     this.input.resetMouseDelta();
@@ -480,10 +578,21 @@ export class Game {
     this.cameraSystem.update(dt);
     this.combat.update(dt, this.player, this.enemies, this.input);
     this.hud.update(this.player, this.combat);
+    this.hud.updateMinimap(this.player, this.enemies);
 
-    for (const enemy of this.enemies) {
-      enemy.update(dt, this.player);
+    // Кешируем массив мешей прохожих (не создаём каждый кадр)
+    if (!this._pedMeshCache || this._pedMeshCacheLen !== this.pedestrians.length) {
+      this._pedMeshCache = this.pedestrians.map(p => p.mesh);
+      this._pedMeshCacheLen = this.pedestrians.length;
     }
+    for (const enemy of this.enemies) {
+      enemy.update(dt, this.player, this._pedMeshCache);
+    }
+
+    // Анимация прохожих, машин, светофоров
+    this.updatePedestrians(dt);
+    this.updateMovingCars(dt);
+    this.updateTrafficLights();
 
     // Удаление мёртвых врагов
     this.enemies = this.enemies.filter(e => {
@@ -513,12 +622,27 @@ export class Game {
 
     document.exitPointerLock();
 
-    this.levelTransitionHandler = () => {
-      if (!hasNextLevel) return;
-
+    this.levelTransitionHandler = async () => {
       window.removeEventListener('click', this.levelTransitionHandler!);
       window.removeEventListener('touchend', this.levelTransitionHandler!);
       this.levelTransitionHandler = null;
+
+      if (!hasNextLevel) {
+        // Босс побеждён — разблокировать скин R-111
+        this.player.bossDefeated = true;
+        this.player.sayQuote('«R-111 уничтожен. Его броня теперь моя.»');
+
+        // Финальная заставка + титры
+        this.running = false;
+        const { playOutro } = await import('../outro');
+        await playOutro();
+        const { playCredits } = await import('../credits');
+        await playCredits();
+        // После титров — показываем экран победы
+        this.hud.showLevelComplete(this.currentLevel + 1, false);
+        return;
+      }
+
       this.startNextLevel();
     };
 
@@ -569,14 +693,8 @@ export class Game {
     }
 
     // Загрузить уровень заново (создаст окружение + врагов + сбросит игрока)
-    if (this.currentLevel === 0 || this.currentLevel === 9) {
-      // Корабль — просто сбросить позицию
-      this.player.reset(this.getSpawnForShipLevel());
-      this.loadLevel(this.currentLevel);
-    } else {
-      this.showShip(); // восстановить видимость для hideShip
-      this.loadLevel(this.currentLevel);
-    }
+    this.showShip();
+    this.loadLevel(this.currentLevel);
 
     this.hud.hideLevelComplete();
     this.gameOver = false;
@@ -604,35 +722,170 @@ export class Game {
     }
 
     // Загрузить новый уровень
-    if (this.currentLevel === 0 || this.currentLevel === 9) {
-      // Возврат на корабль (уровень 10 — финал)
-      this.player.reset(this.getSpawnForShipLevel());
-      this.loadLevel(this.currentLevel);
-    } else {
-      this.loadLevel(this.currentLevel);
-    }
+    this.loadLevel(this.currentLevel);
 
     // Обновить HUD
     this.hud.setLevel(this.currentLevel + 1);
     this.hud.setLevelName(LEVEL_NAMES[this.currentLevel]);
     this.hud.hideLevelComplete();
 
-    // Уровень 10 (индекс 9) — Гривус просыпается
-    if (this.currentLevel === 9 && this.grievousRef) {
-      this.grievousWaking = true;
-      this.grievousWakeTimer = 0;
-    }
 
     // Разблокировать игру
     this.levelComplete = false;
   }
 
   private getSpawnForShipLevel(): THREE.Vector3 {
-    if (this.currentLevel === 9) {
+    if (this.currentLevel === 11) {
       // Финал — спавн ближе к комнате Гривуса
       return new THREE.Vector3(0, 1.5, -165);
     }
     return new THREE.Vector3(-20, 1.5, -75);
+  }
+
+  private updateMovingCars(dt: number): void {
+    for (const car of this.movingCars) {
+      // Двигаем машину вдоль дороги
+      car.mesh.position.x += car.dirX * car.speed * dt;
+      car.mesh.position.z += car.dirZ * car.speed * dt;
+
+      // Если уехала за пределы — телепортируем обратно
+      const dx = car.mesh.position.x - car.startX;
+      const dz = car.mesh.position.z - car.startZ;
+      const traveled = Math.abs(dx * car.dirX + dz * car.dirZ);
+      if (traveled > car.length) {
+        car.mesh.position.x = car.startX;
+        car.mesh.position.z = car.startZ;
+      }
+    }
+  }
+
+  private updateTrafficLights(): void {
+    // Цикл: 4 сек красный, 1 сек жёлтый, 4 сек зелёный, 1 сек жёлтый
+    const cycle = 10;
+    const t = (performance.now() / 1000) % cycle;
+
+    for (const tl of this.trafficLights) {
+      const shifted = (t + tl.phase * cycle) % cycle;
+      const isRed = shifted < 4;
+      const isYellow1 = shifted >= 4 && shifted < 5;
+      const isGreen = shifted >= 5 && shifted < 9;
+      const isYellow2 = shifted >= 9;
+
+      (tl.redMesh.material as THREE.MeshBasicMaterial).color.setHex(
+        isRed ? 0xff2222 : 0x331111
+      );
+      (tl.yellowMesh.material as THREE.MeshBasicMaterial).color.setHex(
+        (isYellow1 || isYellow2) ? 0xffcc22 : 0x332200
+      );
+      (tl.greenMesh.material as THREE.MeshBasicMaterial).color.setHex(
+        isGreen ? 0x22ff44 : 0x113311
+      );
+    }
+  }
+
+  /** Генерировать процедурный крик паники */
+  private playPanicScream(position: THREE.Vector3): void {
+    if (!this.audioListener) return;
+    const ctx = this.audioListener.context;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    // Расстояние до камеры — не проигрываем далёкие
+    const camPos = this.camera.position;
+    const dist = camPos.distanceTo(position);
+    if (dist > 50) return;
+    const volume = Math.max(0, 1 - dist / 50) * 0.25;
+
+    const now = ctx.currentTime;
+    const duration = 0.3 + Math.random() * 0.5;
+
+    // Мужской или женский голос
+    const isFemale = Math.random() > 0.5;
+    const baseFreq = isFemale ? 400 + Math.random() * 300 : 200 + Math.random() * 150;
+
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(volume * 0.6, now + duration * 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    // Основной тон (крик)
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(baseFreq, now);
+    // Крик поднимается и дрожит
+    osc.frequency.linearRampToValueAtTime(baseFreq * 1.5, now + duration * 0.2);
+    osc.frequency.linearRampToValueAtTime(baseFreq * 1.2, now + duration * 0.5);
+    osc.frequency.linearRampToValueAtTime(baseFreq * 0.8, now + duration);
+
+    // Вибрато (дрожание голоса от страха)
+    const vibrato = ctx.createOscillator();
+    vibrato.frequency.value = 6 + Math.random() * 4;
+    const vibGain = ctx.createGain();
+    vibGain.gain.value = baseFreq * 0.08;
+    vibrato.connect(vibGain);
+    vibGain.connect(osc.frequency);
+
+    // Фильтр (приглушить резкость)
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = baseFreq * 2;
+    filter.Q.value = 2;
+
+    osc.connect(filter);
+    filter.connect(gain);
+
+    osc.start(now);
+    vibrato.start(now);
+    osc.stop(now + duration);
+    vibrato.stop(now + duration);
+  }
+
+  private updatePedestrians(dt: number): void {
+    this.pedTime += dt;
+
+    // Случайные крики паники от прохожих
+    this.pedScreamTimer += dt;
+    if (this.pedScreamTimer > 0.8 && this.pedestrians.length > 0) {
+      this.pedScreamTimer = 0;
+      // 1-2 случайных прохожих кричат
+      const count = 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < count; i++) {
+        const ped = this.pedestrians[Math.floor(Math.random() * this.pedestrians.length)];
+        this.playPanicScream(ped.mesh.position);
+      }
+    }
+
+    for (const ped of this.pedestrians) {
+      // Движение по кругу вокруг начальной точки
+      const t = this.pedTime * ped.speed * 0.3 + ped.phase;
+      const newX = ped.originX + Math.sin(t) * ped.walkRadius;
+      const newZ = ped.originZ + Math.cos(t) * ped.walkRadius;
+
+      // Направление движения
+      const dx = newX - ped.mesh.position.x;
+      const dz = newZ - ped.mesh.position.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist > 0.01) {
+        // Плавное движение
+        ped.mesh.position.x += dx * Math.min(dt * 2, 1);
+        ped.mesh.position.z += dz * Math.min(dt * 2, 1);
+
+        // Поворот в направлении движения
+        const targetAngle = Math.atan2(dx, dz);
+        let angleDiff = targetAngle - ped.mesh.rotation.y;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        ped.mesh.rotation.y += angleDiff * Math.min(dt * 4, 1);
+      }
+
+      // Анимация ходьбы (качание конечностей)
+      const swing = Math.sin(this.pedTime * ped.speed * 5 + ped.phase) * 0.4;
+      if (ped.leftLeg) ped.leftLeg.rotation.x = swing;
+      if (ped.rightLeg) ped.rightLeg.rotation.x = -swing;
+      if (ped.leftArm) ped.leftArm.rotation.x = -swing * 0.7;
+      if (ped.rightArm) ped.rightArm.rotation.x = swing * 0.7;
+    }
   }
 
   private onResize(): void {
@@ -641,5 +894,6 @@ export class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.composer.setSize(w, h);
   }
 }

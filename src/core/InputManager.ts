@@ -166,6 +166,36 @@ export class InputManager {
     );
   }
 
+  // Исцеление
+  get heal(): boolean {
+    return this.isKeyDown('KeyH') || this.isKeyDown('Enter') || this.isKeyDown('NumpadEnter');
+  }
+
+  // Смена скина
+  get switchSkin(): boolean {
+    return this.isKeyDown('Equal') || this.isKeyDown('NumpadAdd');
+  }
+
+  // Полёт — включить
+  get flyOn(): boolean {
+    return this.isKeyDown('F10');
+  }
+
+  // Полёт — выключить
+  get flyOff(): boolean {
+    return this.isKeyDown('Backspace');
+  }
+
+  // Подъём (в режиме полёта)
+  get flyUp(): boolean {
+    return this.isKeyDown('Space');
+  }
+
+  // Спуск (в режиме полёта)
+  get flyDown(): boolean {
+    return this.isKeyDown('ShiftLeft') || this.isKeyDown('ShiftRight');
+  }
+
   // Укрытие (приседание)
   get cover(): boolean {
     return (

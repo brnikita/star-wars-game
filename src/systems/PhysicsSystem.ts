@@ -68,6 +68,40 @@ export class PhysicsSystem {
     return null;
   }
 
+  /** Проверка прямой видимости между двумя точками (без учёта указанных тел) */
+  hasLineOfSight(from: THREE.Vector3, to: THREE.Vector3, excludeBodies: CANNON.Body[]): boolean {
+    const totalDist = Math.sqrt(
+      (to.x - from.x) ** 2 + (to.y - from.y) ** 2 + (to.z - from.z) ** 2
+    );
+    if (totalDist < 0.1) return true;
+
+    // Используем intersectWorld для всех попаданий вдоль луча
+    const cannonFrom = new CANNON.Vec3(from.x, from.y, from.z);
+    const cannonTo = new CANNON.Vec3(to.x, to.y, to.z);
+    const result = new CANNON.RaycastResult();
+    const ray = new CANNON.Ray(cannonFrom, cannonTo);
+
+    // Проверяем ближайшее попадание (без skipBackfaces — чтобы тонкие стены работали)
+    ray.intersectWorld(this.world, {
+      result,
+      skipBackfaces: false,
+    });
+
+    if (!result.hasHit) return true;
+
+    // Если попали в исключённое тело — видимость есть
+    if (excludeBodies.includes(result.body as CANNON.Body)) return true;
+
+    // Попали в стену — проверяем, ближе ли она чем цель
+    // Статические тела (mass === 0) — это стены/здания/перекрытия
+    const hitBody = result.body as CANNON.Body;
+    if (hitBody.mass === 0 && result.distance < totalDist * 0.98) {
+      return false;
+    }
+
+    return true;
+  }
+
   createStaticBox(
     position: THREE.Vector3,
     size: THREE.Vector3

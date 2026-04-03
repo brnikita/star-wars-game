@@ -7,8 +7,8 @@ export const MAX_SUB_STEPS = 3;
 
 // Персонаж K-2SO
 export const K2SO_HEIGHT = 2.1;
-export const K2SO_WALK_SPEED = 15;
-export const K2SO_RUN_SPEED = 27;
+export const K2SO_WALK_SPEED = 22;
+export const K2SO_RUN_SPEED = 38;
 export const K2SO_JUMP_FORCE = 8;
 export const K2SO_TURN_SPEED = 8;
 export const K2SO_MAX_HEALTH = 100;
@@ -65,7 +65,7 @@ export const COLOR_BLASTER_PLAYER = 0x4a9eff; // синий
 export const COLOR_BLASTER_ENEMY = 0x44ff44;   // зелёный (джедаи)
 export const COLOR_BLASTER_TURRET = 0xff4422;  // красно-оранжевый (турель)
 export const COLOR_K2SO_BODY = 0x1a1a1a;       // тёмный металл
-export const COLOR_K2SO_EYES = 0xffffff;        // белые глаза
+export const COLOR_K2SO_EYES = 0x2288ff;        // синие глаза
 export const COLOR_IMPERIAL_WALL = 0x5a5a5e;    // серые стены
 export const COLOR_IMPERIAL_FLOOR = 0x444448;   // тёмный пол
 export const COLOR_EMERGENCY_LIGHT = 0xff2200;  // аварийный красный

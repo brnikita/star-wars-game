@@ -43,6 +43,8 @@ export class CombatSystem {
       this.playerShoot(player, input);
       this.playerFireTimer = BLASTER_FIRE_RATE;
       player.ammo--;
+      player.playShootSound();
+      player.onFirstShot();
 
       if (player.ammo <= 0) {
         player.startReload();
@@ -58,6 +60,8 @@ export class CombatSystem {
     if (input.melee && this.meleeTimer <= 0) {
       this.meleeAttack(player, enemies);
       this.meleeTimer = MELEE_COOLDOWN;
+      player.playMeleeSound();
+      player.onMelee();
     }
 
     // Стрельба врагов
@@ -80,9 +84,11 @@ export class CombatSystem {
     // Направление стрельбы — от дула к точке прицеливания камеры
     const dir = new THREE.Vector3().subVectors(player.aimPoint, origin).normalize();
 
+    const damage = BLASTER_DAMAGE + player.shootDamageBonus;
+    const color = player.shootDamageBonus > 0 ? 0xff2200 : COLOR_BLASTER_PLAYER;
     const projectile = new Projectile(
       this.scene, origin, dir,
-      COLOR_BLASTER_PLAYER, BLASTER_DAMAGE, true
+      color, damage, true
     );
     this.projectiles.push(projectile);
   }
@@ -137,7 +143,7 @@ export class CombatSystem {
             enemy.takeDamage(proj.damage);
             proj.isDead = true;
             this.createHitEffect(projPos.clone(), COLOR_BLASTER_PLAYER);
-            if (enemy.isDead) this.kills++;
+            if (enemy.isDead) { this.kills++; player.onEnemyKilled(); }
             break;
           }
         }
